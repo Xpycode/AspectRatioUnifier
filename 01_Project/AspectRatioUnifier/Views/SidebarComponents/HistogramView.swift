@@ -70,9 +70,11 @@ struct HistogramView: View {
         if let bucket = appState.selectedBucket {
             VStack(alignment: .leading, spacing: 6) {
                 Divider()
-                HStack {
+                HStack(spacing: 10) {
+                    Image(systemName: "target")
+                        .foregroundStyle(Color.accentColor)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Target")
+                        Text("Target committed")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text("\(Int(bucket.medianSize.width)) × \(Int(bucket.medianSize.height))")
@@ -82,14 +84,6 @@ struct HistogramView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button {
-                        // Wave 5 hooks this to actual export settings; for now it's the
-                        // affirmative gesture and stays visually "on" once selected.
-                        appState.selectedBucketID = bucket.id
-                    } label: {
-                        Label("Pick as target", systemImage: "target")
-                    }
-                    .buttonStyle(FCPToolbarButtonStyle(isOn: true))
                 }
             }
         } else {

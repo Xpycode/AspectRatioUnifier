@@ -33,6 +33,11 @@ struct ActionButtonsView: View {
         imagesToProcess.contains { appState.exportSettings.wouldOverwriteOriginal(for: $0.url) }
     }
 
+    private var allCurrentItemsExcluded: Bool {
+        guard appState.selectedBucket != nil else { return false }
+        return !imagesToProcess.isEmpty && imagesToProcess.allSatisfy { appState.isExcluded($0.id) }
+    }
+
     private var isSaveInPlaceMode: Bool {
         appState.exportSettings.outputDirectory.isOverwriteMode
     }
@@ -82,7 +87,7 @@ struct ActionButtonsView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
                 .controlSize(.large)
-                .disabled(!appState.canExport || saveInPlaceValidationError != nil)
+                .disabled(!appState.canExport || saveInPlaceValidationError != nil || allCurrentItemsExcluded)
             } else {
                 Button {
                     selectOutputFolder()
@@ -97,7 +102,7 @@ struct ActionButtonsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(!appState.canExport || wouldOverwriteAny)
+                .disabled(!appState.canExport || wouldOverwriteAny || allCurrentItemsExcluded)
             }
 
             // Warning messages
@@ -113,11 +118,15 @@ struct ActionButtonsView: View {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.orange)
+            } else if allCurrentItemsExcluded {
+                Text("All images are excluded — reselect at least one to export")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
             }
         }
         .sheet(isPresented: $showReviewSheet) {
             if let outputDir = pendingOutputDirectory {
-                BatchReviewView(
+                PreviewGridView(
                     images: imagesToProcess,
                     outputDirectory: outputDir
                 ) { selectedImages in

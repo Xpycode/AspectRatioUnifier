@@ -185,7 +185,7 @@ extension View {
                 set: { coordinator.showReviewSheet = $0 }
             )) {
                 if let outputDir = coordinator.pendingOutputDirectory {
-                    BatchReviewView(images: imagesToProcess, outputDirectory: outputDir) { selectedImages in
+                    PreviewGridView(images: imagesToProcess, outputDirectory: outputDir) { selectedImages in
                         Task {
                             await coordinator.processImages(selectedImages, to: outputDir)
                         }
