@@ -76,4 +76,70 @@ This file tracks the WHY behind technical and design decisions.
 - Bundle id, scheme, target, display name, icon, and appcast URL all need renaming (follow the cookbook recipe).
 
 ---
+
+### 2026-04-23 — Bucketing tolerance: ±1%, user-adjustable
+
+**Context:** Ratios 1.498 and 1.502 must bucket together as 3:2. Tolerance too tight fragments a single-ratio archive into near-duplicate buckets; too loose merges distinct named ratios.
+
+**Decision:** ±1% default, exposed as a Preferences setting (advanced users can go tighter).
+
+**Rationale:**
+- 35mm scanner-bed skew + film curvature typically produces 0.3–0.8% ratio drift — ±1% absorbs it.
+- Nearest named-ratio neighbours are ~11% apart (3:2 = 1.500 vs 5:3 = 1.667), so ±1% has no collision risk.
+- ±0.5% would fragment a uniformly-3:2 archive; ±2%+ risks merging 3:2 and 5:3 under skew.
+- Making it a setting defers the "what if my scanner is worse?" argument until someone actually has that scanner.
+
+**Consequences:**
+- `Config.swift` gets `ratioTolerance: Double = 0.01`.
+- Preferences pane needed (Wave 6) — a numeric field with %.
+- `RatioAnalyzer` reads the tolerance from config at analyse time, not at bucket-creation time, so re-analyses pick up the new value.
+
+---
+
+### 2026-04-23 — Tie-break rule: named-preset closeness
+
+**Context:** When two buckets have equal image counts, which wins the "suggested target" spot in the histogram's default selection?
+
+**Options Considered:**
+1. **Closer to overall median size wins** (earlier tentative idea).
+2. **Closer to a named preset** (1:1, 4:5, 5:4, 4:3, 3:2, 16:9, 16:10, 9:16, 2:3, 3:4) wins.
+3. **Deterministic ratio order** (smaller ratio value first).
+
+**Decision:** 2 primary, 3 as final fallback. Secondary tie-break: higher count in a ±0.5% sub-bucket (penalises buckets that are two borderline ratios merged by tolerance).
+
+**Rationale:**
+- Size is orthogonal to ratio; option 1 makes no sense — two buckets can tie on count with wildly different absolute pixel dimensions but identical ratios.
+- Named presets correspond to real-world intent. If two buckets tie and one matches 3:2 exactly while the other sits at 1.48, the user almost certainly wants 3:2.
+- The sub-bucket check catches cases where a ±1% merge has lumped "almost 3:2" and "actually 1.48" together — if they split under ±0.5% and one side is clearly denser, prefer the denser side.
+
+**Consequences:**
+- `AspectRatioBucket` carries an `isNamedPreset` flag and a `distanceToNearestPreset` value for sorting.
+- Deterministic order matters — UI must not rearrange bucket order between analyses for the same set.
+
+---
+
+### 2026-04-23 — Upscale policy: flag + user-deselect, never silent
+
+**Context:** The picked target's median size may exceed some source images' dimensions. Scale-to-fill then means upscaling, which degrades.
+
+**Options Considered:**
+1. Refuse — force user to pick a smaller target.
+2. Allow silently — just upscale.
+3. Allow with warning badge + count footer.
+4. **Flag undersized items + let user deselect them** — default is "include everything," but the ⚠ badge tells the user exactly which items would be upscaled, and one click removes them from the batch.
+
+**Decision:** 4. Undersized items get a ⚠ overlay in the preview grid. Click toggles exclude/include. Footer shows "14 included (3 with upscale) / 3 excluded." Export skips the excluded set.
+
+**Rationale:**
+- Photographers know their archive. Don't patronise (option 1) or hide the downside (option 2).
+- Option 3 (just a warning) makes the user feel watched but gives no action — adding deselection closes the loop.
+- Default-include rather than default-exclude because a 10% upscale on a 4000×2667 scan is often fine; the user should have to actively decide to drop an item, not actively decide to keep it.
+
+**Consequences:**
+- `BucketItem` needs an `isExcluded: Bool` state, toggled from the preview.
+- Export coordinator filters on `!isExcluded`.
+- UI: dashed red border on the ⚠ badge when excluded; solid amber when included-but-upscale.
+- "Select all / deselect all upscales" quick-action in the footer.
+
+---
 *Add decisions as they are made. Future-you will thank present-you.*
