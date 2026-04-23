@@ -11,8 +11,8 @@
 ## Current Position
 - **Funnel:** build
 - **Phase:** implementation
-- **Focus:** Wave 3 — `AspectRatioBucket` model + `RatioAnalyzer` service
-- **Status:** ready (Waves 1 + 2 merged to `main`)
+- **Focus:** Wave 4 — `HistogramView` picker + `RatioTargetResolver`
+- **Status:** ready (Waves 1–3 merged to `main`)
 - **Last updated:** 2026-04-23
 
 ## Funnel Progress (Ralph-style)
@@ -21,25 +21,25 @@
 |--------|--------|------|
 | **Define** | ✓ | Name, positioning, proposal algorithm chosen |
 | **Plan** | ✓ | IMPLEMENTATION_PLAN.md written; three decisions locked |
-| **Build** | active | Waves 1+2 shipped; Waves 3–6 ahead |
+| **Build** | active | Waves 1–3 shipped; Waves 4–6 ahead |
 
 ## Phase Progress
 ```
-[######..............] 30% - 2 of 6 waves complete (clone + strip)
+[##########..........] 50% - 3 of 6 waves complete (clone + strip + analysis)
 ```
 
 | Phase | Status | Tasks |
 |-------|--------|-------|
 | Discovery | ✓ | Problem framed, name chosen, algorithm (B + A fast path) chosen |
 | Planning | ✓ | Reuse map, new-module sketches, 6-wave execution, 3 decisions |
-| Implementation | active | Wave 1 ✓ · Wave 2 ✓ · Wave 3 next · Waves 4–6 pending |
+| Implementation | active | Wave 1 ✓ · Wave 2 ✓ · Wave 3 ✓ · Wave 4 next · Waves 5–6 pending |
 | Polish | pending | Preferences pane + app-shell audit (Wave 6) |
 
 ## Readiness
 
 | Dimension | Status | Notes |
 |-----------|--------|-------|
-| Features | 🔶 WIP | Foundation running (import+resize+export); analysis/histogram/preview pending |
+| Features | 🔶 WIP | Foundation + ratio analysis running; histogram/preview/export-crop pending |
 | UI/Polish | 🔶 WIP | Theme + App Shell inherited from CropBatch; sidebar is Wave-4 placeholder |
 | Testing | ⚪ — | Needs mixed-ratio fixture set |
 | Docs | ✓ | Directions, plan, decisions, CLAUDE.md all current |
@@ -71,11 +71,11 @@ None currently — the three originally blocking were all decided 2026-04-23.
 ## Context
 - **Origin:** user's own 35mm-film archive — consistent source (all 3:2), inconsistent scans from 20+ years ago
 - **Sibling app lifted from:** `../CropBatch` (mature macOS app, same author)
-- **Current branch:** `main` (Waves 1+2 merged from `feature/clone-rename` + `feature/strip-unused`)
+- **Current branch:** `main` (Waves 1–3 merged; Wave 3 from `feature/ratio-analysis`)
 
 ## Resume
 
-Start Wave 3: create `Models/AspectRatioBucket.swift` + `Services/RatioAnalyzer.swift`. Use `CGImageSourceCopyPropertiesAtIndex` with `kCGImagePropertyPixelWidth`/`Height` for metadata-only reads (no decode). Bucket by ±1% tolerance (from `Config.swift`, default value 0.01). Verify via `print()` on import before wiring UI. See plan §3.1–§3.2 and §4 Wave 3.
+Start Wave 4: add `Views/HistogramView.swift` + `Services/RatioTargetResolver.swift`. Replace the temp `scheduleRatioAnalysis()` log hook in `AppState.addImages` / `AppState.showImportPanel` with observable state (`buckets`, `selectedBucket`, `targetSize`). Wire the histogram as the new Analyze tab — HStack of clickable bars, selected bar gets Theme accent border, "Pick this as target" button exposes median size. Verified on real 10-image drop (2026-04-23): 7-bucket output including a 4-way near-3:2 drift cluster (1.47/1.49/1.52/3:2) — real scanner signal, widening tolerance in Wave 6 will collapse it. See plan §3.3, §3.5, §3.6 and §4 Wave 4.
 
 ---
 *Updated by Claude. Source of truth for project position.*
