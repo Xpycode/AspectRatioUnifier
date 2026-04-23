@@ -113,9 +113,10 @@ struct SidebarView: View {
                     }
                 }
 
-                Section("Wave 4 placeholder") {
-                    Label("Ratio histogram + target picker", systemImage: "chart.bar.xaxis")
-                        .foregroundStyle(.secondary)
+                if !appState.buckets.isEmpty {
+                    Section {
+                        HistogramView()
+                    }
                 }
 
                 Section {

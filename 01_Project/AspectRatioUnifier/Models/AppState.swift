@@ -51,6 +51,21 @@ final class AppState {
 
     private var currentExportTask: Task<[URL], Error>?
 
+    // MARK: - Ratio Analysis State
+
+    var buckets: [AspectRatioBucket] = []
+    var selectedBucketID: UUID?
+
+    var selectedBucket: AspectRatioBucket? {
+        guard let id = selectedBucketID else { return nil }
+        return buckets.first { $0.id == id }
+    }
+
+    var targetSize: CGSize? {
+        guard let bucket = selectedBucket else { return nil }
+        return RatioTargetResolver().resolve(bucket: bucket).targetSize
+    }
+
     // MARK: - View State
 
     var zoomMode: ZoomMode = .fit
@@ -114,17 +129,22 @@ final class AppState {
         }
     }
 
-    // TODO: Wave 4 — replace with AppState.buckets + HistogramView
+    // TODO: Wave 5 — debounce; currently re-runs on every import call.
     private func scheduleRatioAnalysis() {
         let items = imageManager.images
         Task.detached(priority: .userInitiated) {
-            let clock = ContinuousClock()
-            let start = clock.now
             let buckets = await RatioAnalyzer().analyze(items: items)
-            let elapsed = start.duration(to: clock.now).components
-            let elapsedMs = Int(elapsed.seconds) * 1000 + Int(elapsed.attoseconds / 1_000_000_000_000_000)
-            let summary = buckets.map { "\($0.items.count)× \($0.label) @ \(Int($0.medianSize.width))×\(Int($0.medianSize.height))" }.joined(separator: ", ")
-            AspectRatioUnifierLogger.storage.notice("RatioAnalyzer: \(buckets.count) buckets in \(elapsedMs, privacy: .public)ms — \(summary, privacy: .public)")
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.buckets = buckets
+                // Keep existing selection if that bucket id is still present after re-analysis;
+                // otherwise auto-pick the highest-count bucket (Algorithm A fast path, plan §3.5).
+                if let sel = self.selectedBucketID, buckets.contains(where: { $0.id == sel }) {
+                    // keep
+                } else {
+                    self.selectedBucketID = RatioTargetResolver().autoPick(from: buckets)?.id
+                }
+            }
         }
     }
 
