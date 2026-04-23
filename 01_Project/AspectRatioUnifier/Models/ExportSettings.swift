@@ -124,6 +124,7 @@ struct ExportSettings: Equatable {
     var outputDirectory: OutputDirectory = .sameAsSource
     var resizeSettings: ResizeSettings = ResizeSettings()
     var renameSettings: RenameSettings = RenameSettings()
+    var ratioTarget: CGSize? = nil
 
     enum OutputDirectory: Equatable {
         case sameAsSource

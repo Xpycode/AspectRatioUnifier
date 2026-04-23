@@ -55,6 +55,7 @@ final class AppState {
 
     var buckets: [AspectRatioBucket] = []
     var selectedBucketID: UUID?
+    var excludedImageIDs: Set<UUID> = []
 
     var selectedBucket: AspectRatioBucket? {
         guard let id = selectedBucketID else { return nil }
@@ -63,7 +64,43 @@ final class AppState {
 
     var targetSize: CGSize? {
         guard let bucket = selectedBucket else { return nil }
-        return RatioTargetResolver().resolve(bucket: bucket).targetSize
+        return RatioTargetResolver().resolve(bucket: bucket)
+    }
+
+    // MARK: - Exclusion helpers
+
+    func isExcluded(_ id: UUID) -> Bool {
+        excludedImageIDs.contains(id)
+    }
+
+    func toggleExclusion(_ id: UUID) {
+        if excludedImageIDs.contains(id) {
+            excludedImageIDs.remove(id)
+        } else {
+            excludedImageIDs.insert(id)
+        }
+    }
+
+    /// Items from the bucket that are currently included (not excluded by the user).
+    func includedItems(for bucket: AspectRatioBucket) -> [BucketItem] {
+        bucket.items.filter { !excludedImageIDs.contains($0.imageID) }
+    }
+
+    /// Count of items in the bucket whose source must be upscaled to hit the target.
+    func upscaleCount(for bucket: AspectRatioBucket, target: CGSize) -> Int {
+        bucket.items.filter { $0.requiresUpscale(target: target) }.count
+    }
+
+    /// Exclude every item in the current bucket whose source must be upscaled.
+    func deselectAllUpscales(for bucket: AspectRatioBucket, target: CGSize) {
+        for item in bucket.items where item.requiresUpscale(target: target) {
+            excludedImageIDs.insert(item.imageID)
+        }
+    }
+
+    /// Re-include everything.
+    func reselectAll() {
+        excludedImageIDs.removeAll()
     }
 
     // MARK: - View State
@@ -150,10 +187,12 @@ final class AppState {
 
     func removeImages(ids: Set<UUID>) {
         imageManager.removeImages(ids: ids)
+        excludedImageIDs.subtract(ids)
     }
 
     func clearAll() {
         imageManager.clearAll()
+        excludedImageIDs.removeAll()
     }
 
     func setActiveImage(_ id: UUID) {
@@ -201,7 +240,8 @@ final class AppState {
         !isProcessing &&
         (exportSettings.resizeSettings.isEnabled ||
          exportSettings.renameSettings.mode == .pattern ||
-         !exportSettings.preserveOriginalFormat)
+         !exportSettings.preserveOriginalFormat ||
+         selectedBucket != nil)
     }
 
     // MARK: - Export operations
@@ -213,8 +253,10 @@ final class AppState {
     func processAndExport(images imagesToExport: [ImageItem]? = nil, to outputDirectory: URL) async throws -> [URL] {
         currentExportTask?.cancel()
 
-        let items = imagesToExport ?? (selectedImageIDs.isEmpty ? self.images : selectedImages)
+        let rawItems = imagesToExport ?? (selectedImageIDs.isEmpty ? self.images : selectedImages)
+        let items = selectedBucket != nil ? rawItems.filter { !isExcluded($0.id) } : rawItems
         var captured = exportSettings
+        captured.ratioTarget = targetSize
         captured.outputDirectory = .custom(outputDirectory)
 
         isProcessing = true
@@ -248,7 +290,9 @@ final class AppState {
     func processAndExportInPlace(images imagesToExport: [ImageItem]) async throws -> [URL] {
         currentExportTask?.cancel()
 
+        let items = selectedBucket != nil ? imagesToExport.filter { !isExcluded($0.id) } : imagesToExport
         var captured = exportSettings
+        captured.ratioTarget = targetSize
         captured.outputDirectory = .overwriteOriginal
 
         isProcessing = true
@@ -265,7 +309,7 @@ final class AppState {
             try Task.checkCancellation()
 
             return try await ImageCropService.batchCrop(
-                items: imagesToExport,
+                items: items,
                 exportSettings: captured
             ) { progress in
                 Task { @MainActor in

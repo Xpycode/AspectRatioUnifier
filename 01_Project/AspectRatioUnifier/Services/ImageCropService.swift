@@ -104,6 +104,49 @@ struct ImageCropService {
         return NSImage(cgImage: resizedCGImage, size: targetSize)
     }
 
+    // MARK: - Scale-to-fill + centre-crop
+
+    /// Scale-to-fill + centre-crop. Scales the image so it covers targetSize (using max
+    /// of x/y scale factors), then centre-crops to exactly targetSize. Thread-safe: pure
+    /// CGContext, no NSGraphicsContext. Use this when normalising a set of images to a
+    /// common aspect ratio + pixel dimensions.
+    static func cropFill(_ image: NSImage, to targetSize: CGSize) throws -> NSImage {
+        guard targetSize.width > 0 && targetSize.height > 0 else {
+            throw ImageCropError.invalidTargetSize
+        }
+
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            throw ImageCropError.failedToGetCGImage
+        }
+
+        let sourceSize = CGSize(width: cgImage.width, height: cgImage.height)
+        let scale = max(targetSize.width / sourceSize.width, targetSize.height / sourceSize.height)
+        let scaledSize = CGSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+        let offsetX = (scaledSize.width - targetSize.width) / 2
+        let offsetY = (scaledSize.height - targetSize.height) / 2
+
+        let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil,
+            width: Int(targetSize.width),
+            height: Int(targetSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw ImageCropError.failedToCreateContext
+        }
+
+        context.interpolationQuality = .high
+        context.draw(cgImage, in: CGRect(x: -offsetX, y: -offsetY, width: scaledSize.width, height: scaledSize.height))
+
+        guard let resultImage = context.makeImage() else {
+            throw ImageCropError.failedToResize
+        }
+        return NSImage(cgImage: resultImage, size: targetSize)
+    }
+
     // MARK: - Normalized CGImage (applies EXIF orientation)
 
     /// Returns a CGImage with any EXIF/NSImage orientation baked in, so pixel coords match what the user sees.
@@ -242,7 +285,9 @@ struct ImageCropService {
     ) throws -> URL {
         var image = item.originalImage
 
-        if let targetSize = calculateResizedSize(from: item.originalSize, with: exportSettings.resizeSettings) {
+        if let ratioTarget = exportSettings.ratioTarget {
+            image = try cropFill(image, to: ratioTarget)
+        } else if let targetSize = calculateResizedSize(from: item.originalSize, with: exportSettings.resizeSettings) {
             image = try resize(image, to: targetSize)
         }
 
