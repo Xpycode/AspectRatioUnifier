@@ -24,10 +24,11 @@ struct AspectRatioUnifierApp: App {
             ContentView()
                 .environment(appState)
                 .preferredColorScheme(.dark)
+                .frame(minWidth: 1200, minHeight: 720)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 1200, height: 800)
+        .defaultSize(width: 1400, height: 900)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates...") {
