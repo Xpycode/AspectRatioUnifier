@@ -63,11 +63,8 @@ struct FileSizeEstimator {
         let originalPixels = image.originalSize.width * image.originalSize.height
         var outputPixels = originalPixels
 
-        if let resizedSize = ImageCropService.calculateResizedSize(
-            from: image.originalSize,
-            with: exportSettings.resizeSettings
-        ) {
-            outputPixels = resizedSize.width * resizedSize.height
+        if let ratioTarget = exportSettings.ratioTarget {
+            outputPixels = ratioTarget.width * ratioTarget.height
         }
 
         let pixelRatio = originalPixels > 0 ? outputPixels / originalPixels : 1.0

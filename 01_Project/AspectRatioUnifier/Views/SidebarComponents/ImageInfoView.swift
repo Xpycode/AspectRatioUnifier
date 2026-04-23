@@ -12,17 +12,6 @@ struct ImageInfoView: View {
                     .foregroundStyle(.secondary)
             }
             .font(.callout)
-
-            if let majority = appState.majorityResolution {
-                HStack {
-                    Text("Resolution:")
-                    Spacer()
-                    Text("\(Int(majority.width)) × \(Int(majority.height))")
-                        .foregroundStyle(.secondary)
-                }
-                .font(.callout)
-            }
-
         }
     }
 }

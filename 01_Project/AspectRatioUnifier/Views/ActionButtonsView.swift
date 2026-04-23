@@ -151,7 +151,7 @@ struct ActionButtonsView: View {
             }
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Successfully exported \(exportedCount) cropped images")
+            Text("Successfully exported \(exportedCount) ratioed images")
         }
         .confirmationDialog(
             "Overwrite Existing Files?",

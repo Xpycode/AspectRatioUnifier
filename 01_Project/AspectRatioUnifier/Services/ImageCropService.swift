@@ -6,7 +6,6 @@ import UniformTypeIdentifiers
 
 enum ImageCropError: LocalizedError {
     case failedToGetCGImage
-    case invalidCropRegion
     case failedToCreateDestination
     case failedToWriteImage
     case wouldOverwriteOriginal(String)
@@ -18,7 +17,6 @@ enum ImageCropError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .failedToGetCGImage:       return "Failed to convert image to bitmap format"
-        case .invalidCropRegion:        return "Crop region is larger than the image"
         case .failedToCreateDestination:return "Failed to create output file"
         case .failedToWriteImage:       return "Failed to write output image"
         case .wouldOverwriteOriginal(let filename):
@@ -37,72 +35,6 @@ enum ImageCropError: LocalizedError {
 /// v1 supports resize-only. Wave 5 extends this with the ratio-driven scale-to-fill
 /// + center-crop path that conforms outliers to the picked target bucket.
 struct ImageCropService {
-
-    // MARK: - Size calculation
-
-    static func calculateResizedSize(from originalSize: CGSize, with settings: ResizeSettings) -> CGSize? {
-        guard settings.isEnabled else { return nil }
-
-        switch settings.mode {
-        case .none:
-            return nil
-        case .exactSize:
-            if settings.maintainAspectRatio {
-                let scale = min(CGFloat(settings.width) / originalSize.width,
-                                CGFloat(settings.height) / originalSize.height)
-                return CGSize(width: originalSize.width * scale, height: originalSize.height * scale)
-            } else {
-                return CGSize(width: settings.width, height: settings.height)
-            }
-        case .maxWidth:
-            guard originalSize.width > CGFloat(settings.width) else { return nil }
-            let scale = CGFloat(settings.width) / originalSize.width
-            return CGSize(width: CGFloat(settings.width), height: originalSize.height * scale)
-        case .maxHeight:
-            guard originalSize.height > CGFloat(settings.height) else { return nil }
-            let scale = CGFloat(settings.height) / originalSize.height
-            return CGSize(width: originalSize.width * scale, height: CGFloat(settings.height))
-        case .percentage:
-            let scale = settings.percentage / 100.0
-            return CGSize(width: originalSize.width * scale, height: originalSize.height * scale)
-        }
-    }
-
-    // MARK: - Resize
-
-    /// Thread-safe resize using pure CGContext. NSGraphicsContext is NOT thread-safe.
-    static func resize(_ image: NSImage, to targetSize: CGSize) throws -> NSImage {
-        let targetWidth = Int(targetSize.width)
-        let targetHeight = Int(targetSize.height)
-        guard targetWidth > 0 && targetHeight > 0 else {
-            throw ImageCropError.invalidTargetSize
-        }
-
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            throw ImageCropError.failedToGetCGImage
-        }
-
-        let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(
-            data: nil,
-            width: targetWidth,
-            height: targetHeight,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            throw ImageCropError.failedToCreateContext
-        }
-
-        context.interpolationQuality = .high
-        context.draw(cgImage, in: CGRect(origin: .zero, size: targetSize))
-
-        guard let resizedCGImage = context.makeImage() else {
-            throw ImageCropError.failedToResize
-        }
-        return NSImage(cgImage: resizedCGImage, size: targetSize)
-    }
 
     // MARK: - Scale-to-fill + centre-crop
 
@@ -287,8 +219,6 @@ struct ImageCropService {
 
         if let ratioTarget = exportSettings.ratioTarget {
             image = try cropFill(image, to: ratioTarget)
-        } else if let targetSize = calculateResizedSize(from: item.originalSize, with: exportSettings.resizeSettings) {
-            image = try resize(image, to: targetSize)
         }
 
         let outputURL = exportSettings.outputURL(for: item.url, index: index)

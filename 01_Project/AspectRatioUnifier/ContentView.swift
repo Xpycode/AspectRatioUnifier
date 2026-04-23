@@ -6,16 +6,14 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @Environment(AppState.self) private var appState
     @State private var showShortcutsPopover = false
+    @State private var showClearAllConfirmation = false
 
     var body: some View {
         HStack(spacing: 0) {
             if appState.images.isEmpty {
                 DropZoneView()
             } else {
-                VStack(spacing: 0) {
-                    ImageGridView()
-                    ThumbnailStripView()
-                }
+                ImageGridView()
             }
 
             Divider()
@@ -63,7 +61,11 @@ struct ContentView: View {
                         .buttonStyle(FCPToolbarButtonStyle())
 
                         Button {
-                            appState.clearAll()
+                            if appState.selectedImageIDs.isEmpty {
+                                showClearAllConfirmation = true
+                            } else {
+                                appState.removeImages(ids: appState.selectedImageIDs)
+                            }
                         } label: {
                             Image(systemName: "trash")
                                 .resizable()
@@ -71,12 +73,27 @@ struct ContentView: View {
                                 .frame(width: 16, height: 16)
                         }
                         .buttonStyle(FCPToolbarButtonStyle())
+                        .help(appState.selectedImageIDs.isEmpty
+                              ? "Clear all images"
+                              : "Remove \(appState.selectedImageIDs.count) selected")
+                        .confirmationDialog(
+                            "Clear all images?",
+                            isPresented: $showClearAllConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Clear All", role: .destructive) { appState.clearAll() }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This will remove all \(appState.images.count) images from the list. Files on disk are not affected.")
+                        }
                     }
                     .buttonStyle(.borderless)
                 }
             }
         }
         .toolbarRole(.editor)
+        .toolbarBackground(Color(white: 0.10), for: .windowToolbar)
+        .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -107,12 +124,6 @@ struct SidebarView: View {
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                if appState.hasResolutionMismatch {
-                    Section {
-                        ResolutionWarningView()
-                    }
-                }
-
                 if !appState.buckets.isEmpty {
                     Section {
                         HistogramView()
@@ -124,7 +135,7 @@ struct SidebarView: View {
                 }
 
                 Section {
-                    QualityResizeView()
+                    QualityNamingView()
                 }
             }
             .formStyle(.grouped)

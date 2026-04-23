@@ -136,9 +136,6 @@ final class AppState {
 
     var selectedImages: [ImageItem] { imageManager.selectedImages }
     var activeImage: ImageItem? { imageManager.activeImage }
-    var majorityResolution: CGSize? { imageManager.majorityResolution }
-    var mismatchedImages: [ImageItem] { imageManager.mismatchedImages }
-    var hasResolutionMismatch: Bool { imageManager.hasResolutionMismatch }
     var memoryWarningLevel: ImageManager.MemoryWarningLevel { imageManager.memoryWarningLevel }
     var shouldShowMemoryWarning: Bool { imageManager.shouldShowMemoryWarning }
     var memoryWarningMessage: String? { imageManager.memoryWarningMessage }
@@ -238,8 +235,7 @@ final class AppState {
     var canExport: Bool {
         !images.isEmpty &&
         !isProcessing &&
-        (exportSettings.resizeSettings.isEnabled ||
-         exportSettings.renameSettings.mode == .pattern ||
+        (exportSettings.renameSettings.mode == .pattern ||
          !exportSettings.preserveOriginalFormat ||
          selectedBucket != nil)
     }

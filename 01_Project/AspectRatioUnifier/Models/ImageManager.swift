@@ -28,37 +28,6 @@ final class ImageManager {
         return images.first
     }
 
-    /// The most common resolution among loaded images
-    var majorityResolution: CGSize? {
-        guard !images.isEmpty else { return nil }
-
-        var resolutionCounts: [String: (size: CGSize, count: Int)] = [:]
-        for image in images {
-            let key = "\(Int(image.originalSize.width))x\(Int(image.originalSize.height))"
-            if let existing = resolutionCounts[key] {
-                resolutionCounts[key] = (existing.size, existing.count + 1)
-            } else {
-                resolutionCounts[key] = (image.originalSize, 1)
-            }
-        }
-
-        return resolutionCounts.values.max(by: { $0.count < $1.count })?.size
-    }
-
-    /// Images that don't match the majority resolution
-    var mismatchedImages: [ImageItem] {
-        guard let majority = majorityResolution else { return [] }
-        return images.filter { image in
-            Int(image.originalSize.width) != Int(majority.width) ||
-            Int(image.originalSize.height) != Int(majority.height)
-        }
-    }
-
-    /// Whether there are resolution mismatches to warn about
-    var hasResolutionMismatch: Bool {
-        !mismatchedImages.isEmpty
-    }
-
     // MARK: - Memory Warnings
 
     /// Warning level for memory usage based on image count

@@ -39,30 +39,6 @@ enum ExportFormat: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-/// Resize mode options
-enum ResizeMode: String, CaseIterable, Identifiable, Codable {
-    case none = "None"
-    case exactSize = "Exact Size"
-    case maxWidth = "Max Width"
-    case maxHeight = "Max Height"
-    case percentage = "Percentage"
-
-    var id: String { rawValue }
-}
-
-/// Resize settings for output images
-struct ResizeSettings: Equatable, Codable {
-    var mode: ResizeMode = .none
-    var width: Int = 1920
-    var height: Int = 1080
-    var percentage: Double = 50.0
-    var maintainAspectRatio: Bool = true
-
-    var isEnabled: Bool {
-        mode != .none
-    }
-}
-
 /// Rename mode for batch export
 enum RenameMode: String, CaseIterable, Identifiable, Codable {
     case keepOriginal = "Keep Original"
@@ -119,10 +95,9 @@ struct RenameSettings: Equatable, Codable {
 struct ExportSettings: Equatable {
     var format: ExportFormat = .png
     var quality: Double = 0.9  // 0.0 to 1.0, only for JPEG/HEIC
-    var suffix: String = "_cropped"
+    var suffix: String = "_ratioed"
     var preserveOriginalFormat: Bool = false
     var outputDirectory: OutputDirectory = .sameAsSource
-    var resizeSettings: ResizeSettings = ResizeSettings()
     var renameSettings: RenameSettings = RenameSettings()
     var ratioTarget: CGSize? = nil
 
@@ -284,49 +259,49 @@ struct ExportPreset: Identifiable, Equatable {
             id: "png_lossless",
             name: "PNG Lossless",
             icon: "doc.zipper",
-            settings: ExportSettings(format: .png, suffix: "_cropped")
+            settings: ExportSettings(format: .png, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "jpeg_high",
             name: "JPEG High (90%)",
             icon: "photo",
-            settings: ExportSettings(format: .jpeg, quality: 0.9, suffix: "_cropped")
+            settings: ExportSettings(format: .jpeg, quality: 0.9, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "jpeg_medium",
             name: "JPEG Medium (75%)",
             icon: "photo",
-            settings: ExportSettings(format: .jpeg, quality: 0.75, suffix: "_cropped")
+            settings: ExportSettings(format: .jpeg, quality: 0.75, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "jpeg_web",
             name: "JPEG Web (60%)",
             icon: "globe",
-            settings: ExportSettings(format: .jpeg, quality: 0.6, suffix: "_cropped")
+            settings: ExportSettings(format: .jpeg, quality: 0.6, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "heic_high",
             name: "HEIC High (90%)",
             icon: "apple.logo",
-            settings: ExportSettings(format: .heic, quality: 0.9, suffix: "_cropped")
+            settings: ExportSettings(format: .heic, quality: 0.9, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "webp_high",
             name: "WebP High (90%)",
             icon: "globe",
-            settings: ExportSettings(format: .webp, quality: 0.9, suffix: "_cropped")
+            settings: ExportSettings(format: .webp, quality: 0.9, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "webp_web",
             name: "WebP Web (75%)",
             icon: "network",
-            settings: ExportSettings(format: .webp, quality: 0.75, suffix: "_cropped")
+            settings: ExportSettings(format: .webp, quality: 0.75, suffix: "_ratioed")
         ),
         ExportPreset(
             id: "preserve_format",
             name: "Keep Original Format",
             icon: "arrow.triangle.2.circlepath",
-            settings: ExportSettings(suffix: "_cropped", preserveOriginalFormat: true)
+            settings: ExportSettings(suffix: "_ratioed", preserveOriginalFormat: true)
         )
     ]
 
@@ -359,7 +334,6 @@ struct ExportSettingsCodable: Codable, Equatable {
     var quality: Double
     var suffix: String
     var preserveOriginalFormat: Bool
-    var resizeSettings: ResizeSettings
     var renameSettings: RenameSettings
 
     init(from settings: ExportSettings) {
@@ -367,7 +341,6 @@ struct ExportSettingsCodable: Codable, Equatable {
         self.quality = settings.quality
         self.suffix = settings.suffix
         self.preserveOriginalFormat = settings.preserveOriginalFormat
-        self.resizeSettings = settings.resizeSettings
         self.renameSettings = settings.renameSettings
     }
 
@@ -377,7 +350,6 @@ struct ExportSettingsCodable: Codable, Equatable {
             quality: quality,
             suffix: suffix,
             preserveOriginalFormat: preserveOriginalFormat,
-            resizeSettings: resizeSettings,
             renameSettings: renameSettings
         )
     }
