@@ -11,8 +11,8 @@
 ## Current Position
 - **Funnel:** build
 - **Phase:** implementation
-- **Focus:** Wave 5 shipped — crop-fill pipeline + preview grid + auto-commit histogram; Wave 6 (Preferences + app-shell audit) next
-- **Status:** ready (Waves 1–5 merged to `main`; awaiting live verification on 529-image archive)
+- **Focus:** Wave 6 + 6.5 shipped — resize/mismatch/thumb-strip pruned, opaque toolbar with smart trash, ratio-filter chips replace zoom, grid shows per-thumb ratio labels + ratio-ascending sort. Next: Wave 7 (unified export dialog + target-size-strategy min/median/max).
+- **Status:** ready (Waves 1–6.5 merged to `main`)
 - **Last updated:** 2026-04-23
 
 ## Funnel Progress (Ralph-style)
@@ -25,15 +25,15 @@
 
 ## Phase Progress
 ```
-[################....] 83% - 5 of 6 waves complete (clone + strip + analysis + histogram + preview/export)
+[##################..] 92% - 6.5 of 7 waves complete (analysis + histogram + preview/export + pruning + filter/labels)
 ```
 
 | Phase | Status | Tasks |
 |-------|--------|-------|
 | Discovery | ✓ | Problem framed, name chosen, algorithm (B + A fast path) chosen |
-| Planning | ✓ | Reuse map, new-module sketches, 6-wave execution, 3 decisions |
-| Implementation | active | Wave 1 ✓ · Wave 2 ✓ · Wave 3 ✓ · Wave 4 ✓ · Wave 5 ✓ · Wave 6 pending |
-| Polish | pending | Preferences pane + app-shell audit (Wave 6) |
+| Planning | ✓ | Reuse map, new-module sketches, wave execution plan, decisions |
+| Implementation | active | Waves 1–6.5 ✓ · Wave 7 (unified export dialog) next |
+| Polish | active | Toolbar + sidebar pruning shipped; Preferences pane + shell-check audit still open |
 
 ## Readiness
 
@@ -78,7 +78,7 @@ None currently — the three originally blocking were all decided 2026-04-23.
 
 ## Resume
 
-Wave 5 shipped on `main` (commits `b2fb428`, `5f44042`). Pipeline: `ExportSettings.ratioTarget: CGSize?` → `ImageCropService.cropFill` scale-to-fill + centre-crop → `PreviewGridView` with live `CropPreviewBadge` overlays → exclusion filter on batch fan-out. Histogram bar-tap now the commitment. Build clean, app launched. Next: live drop-test with the 529-image archive in `TestImages/`, then Wave 6 (Preferences pane with ±1% tolerance slider + app-shell audit).
+Waves 6 + 6.5 shipped on `main` (commits `905eb3a`, `462a510`). Pruned `ResizeMode`/`ResizeSettings`/`calculateResizedSize`/`resize`/mismatch-panel/`ThumbnailStripView`/`ExportSettingsView`; default suffix `_ratioed`; opaque graphite toolbar; smart trash; `RatioFilterChips` replace `ZoomPicker` with multi-select AND filter; grid sorts ascending by ratio + shows per-thumb capsule chip. Next: Wave 7 — unified export dialog (folder picker, format/quality/suffix/naming, upscale+downscale toggles moved into the preview sheet) + target-size-strategy picker (min / median / max) driving `RatioTargetResolver`. See conversation of 2026-04-23 for accumulated design context.
 
 ---
 *Updated by Claude. Source of truth for project position.*
