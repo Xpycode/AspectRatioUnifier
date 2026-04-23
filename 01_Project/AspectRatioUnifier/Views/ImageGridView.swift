@@ -28,7 +28,9 @@ struct ImageGridView: View {
                 }
             }
             .padding(20)
+            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .controlBackgroundColor))
         .toolbar {
             ToolbarItemGroup {
