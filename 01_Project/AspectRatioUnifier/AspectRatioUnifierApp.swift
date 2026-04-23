@@ -74,38 +74,6 @@ struct AspectRatioUnifierApp: App {
                 .disabled(appState.selectedImageIDs.isEmpty)
             }
 
-            CommandGroup(after: .toolbar) {
-                Divider()
-
-                Button("Actual Size (100%)") {
-                    appState.zoomMode = .actualSize
-                }
-                .keyboardShortcut("1", modifiers: .command)
-
-                Button("Fit to View") {
-                    appState.zoomMode = .fit
-                }
-                .keyboardShortcut("2", modifiers: .command)
-
-                Button("Fit Width") {
-                    appState.zoomMode = .fitWidth
-                }
-                .keyboardShortcut("3", modifiers: .command)
-
-                Button("Fit Height") {
-                    appState.zoomMode = .fitHeight
-                }
-                .keyboardShortcut("4", modifiers: .command)
-
-                Divider()
-
-                Toggle("Show Before/After", isOn: Binding(
-                    get: { appState.showBeforeAfter },
-                    set: { appState.showBeforeAfter = $0 }
-                ))
-                .keyboardShortcut("b", modifiers: .command)
-            }
-
             CommandMenu("Image") {
                 Button("Previous Image") {
                     appState.selectPreviousImage()

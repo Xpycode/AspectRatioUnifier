@@ -2,34 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UserNotifications
 
-/// Zoom modes for the image preview
-enum ZoomMode: String, CaseIterable, Identifiable {
-    case actualSize = "100%"
-    case fit = "Fit"
-    case fitWidth = "Fit Width"
-    case fitHeight = "Fit Height"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .actualSize: return "1.circle"
-        case .fit: return "arrow.up.left.and.arrow.down.right"
-        case .fitWidth: return "arrow.left.and.right"
-        case .fitHeight: return "arrow.up.and.down"
-        }
-    }
-
-    var shortcut: String {
-        switch self {
-        case .actualSize: return "⌘1"
-        case .fit: return "⌘2"
-        case .fitWidth: return "⌘3"
-        case .fitHeight: return "⌘4"
-        }
-    }
-}
-
 /// Main application state.
 /// AspectRatioUnifier composes an ImageManager and an ExportSettings bag; the crop/blur/watermark/snap
 /// machinery inherited from CropBatch has been stripped. Future waves add RatioAnalyzer + bucket state here.
@@ -56,6 +28,7 @@ final class AppState {
     var buckets: [AspectRatioBucket] = []
     var selectedBucketID: UUID?
     var excludedImageIDs: Set<UUID> = []
+    var ratioFilter: Set<UUID> = []
 
     var selectedBucket: AspectRatioBucket? {
         guard let id = selectedBucketID else { return nil }
@@ -103,10 +76,33 @@ final class AppState {
         excludedImageIDs.removeAll()
     }
 
-    // MARK: - View State
+    // MARK: - Filter helpers
 
-    var zoomMode: ZoomMode = .fit
-    var showBeforeAfter = false
+    func isFilterActive(for bucket: AspectRatioBucket) -> Bool {
+        ratioFilter.contains(bucket.id)
+    }
+
+    func toggleFilter(for bucket: AspectRatioBucket) {
+        if ratioFilter.contains(bucket.id) {
+            ratioFilter.remove(bucket.id)
+        } else {
+            ratioFilter.insert(bucket.id)
+        }
+    }
+
+    func clearFilter() {
+        ratioFilter.removeAll()
+    }
+
+    /// Image IDs that pass the current filter (empty filter = all images pass).
+    var filteredImageIDs: Set<UUID> {
+        guard !ratioFilter.isEmpty else { return Set(images.map(\.id)) }
+        var ids: Set<UUID> = []
+        for bucket in buckets where ratioFilter.contains(bucket.id) {
+            for item in bucket.items { ids.insert(item.imageID) }
+        }
+        return ids
+    }
 
     // MARK: - Initialization
 
@@ -178,6 +174,7 @@ final class AppState {
                 } else {
                     self.selectedBucketID = RatioTargetResolver().autoPick(from: buckets)?.id
                 }
+                self.ratioFilter = self.ratioFilter.filter { id in buckets.contains(where: { $0.id == id }) }
             }
         }
     }
@@ -190,6 +187,7 @@ final class AppState {
     func clearAll() {
         imageManager.clearAll()
         excludedImageIDs.removeAll()
+        ratioFilter.removeAll()
     }
 
     func setActiveImage(_ id: UUID) {

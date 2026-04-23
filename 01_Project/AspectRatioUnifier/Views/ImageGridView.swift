@@ -7,10 +7,23 @@ struct ImageGridView: View {
         GridItem(.adaptive(minimum: 180, maximum: 250), spacing: 16)
     ]
 
+    /// Filter by ratioFilter (empty = all), then sort by aspect ratio ascending.
+    private var visibleImages: [ImageItem] {
+        let allowed = appState.filteredImageIDs
+        return appState.images
+            .filter { allowed.contains($0.id) }
+            .sorted { a, b in
+                let ra = a.originalSize.width / a.originalSize.height
+                let rb = b.originalSize.width / b.originalSize.height
+                if ra == rb { return a.id.uuidString < b.id.uuidString }
+                return ra < rb
+            }
+    }
+
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(appState.images) { item in
+                ForEach(visibleImages) { item in
                     ImageThumbnailView(item: item)
                 }
             }
@@ -65,6 +78,20 @@ struct ImageThumbnailView: View {
         appState.selectedImageIDs.contains(item.id)
     }
 
+    /// Prefer the bucket label (handles named-preset snapping like "3:2" vs
+    /// "1.15:1"). Fall back to a computed ratio if no bucket includes this
+    /// image (shouldn't happen normally, but keeps the label live during the
+    /// analysis window).
+    private var ratioLabel: String {
+        for bucket in appState.buckets {
+            if bucket.items.contains(where: { $0.imageID == item.id }) {
+                return bucket.label
+            }
+        }
+        let r = item.originalSize.width / item.originalSize.height
+        return String(format: "%.2f:1", r)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topTrailing) {
@@ -73,6 +100,15 @@ struct ImageThumbnailView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(maxHeight: 150)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(alignment: .bottomTrailing) {
+                        Text(ratioLabel)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.black.opacity(0.55), in: Capsule())
+                            .padding(6)
+                    }
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")

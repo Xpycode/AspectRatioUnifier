@@ -26,11 +26,8 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
-                if !appState.images.isEmpty {
-                    ZoomPicker(selection: Binding(
-                        get: { appState.zoomMode },
-                        set: { appState.zoomMode = $0 }
-                    ))
+                if !appState.buckets.isEmpty {
+                    RatioFilterChips()
                 }
             }
 
@@ -145,6 +142,45 @@ struct SidebarView: View {
 
             ExportFooterView()
         }
+    }
+}
+
+struct RatioFilterChips: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(appState.buckets) { bucket in
+                let active = appState.isFilterActive(for: bucket)
+                Button {
+                    appState.toggleFilter(for: bucket)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(bucket.label)
+                            .font(.system(size: 11, weight: .medium))
+                        Text("\(bucket.items.count)×")
+                            .font(.system(size: 10, weight: .regular))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(FCPToolbarButtonStyle(isOn: active))
+                .help("Filter grid to \(bucket.label) (\(bucket.items.count) images)")
+            }
+
+            if !appState.ratioFilter.isEmpty {
+                Button {
+                    appState.clearFilter()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 14, height: 14)
+                }
+                .buttonStyle(FCPToolbarButtonStyle(isOn: false))
+                .help("Clear filter")
+            }
+        }
+        .buttonStyle(.borderless)
     }
 }
 
