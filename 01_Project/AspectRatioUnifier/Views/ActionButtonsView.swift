@@ -37,82 +37,16 @@ struct ActionButtonsView: View {
         appState.exportSettings.outputDirectory.isOverwriteMode
     }
 
-    /// Validation error for Save in Place mode (corner radius + non-PNG)
+    /// Validation error for Save in Place mode
     private var saveInPlaceValidationError: String? {
-        appState.exportSettings.validateOverwriteMode(
-            cornerRadiusEnabled: appState.cropSettings.cornerRadiusEnabled,
-            items: imagesToProcess
-        )
+        appState.exportSettings.validateOverwriteMode(items: imagesToProcess)
     }
 
     var body: some View {
         VStack(spacing: 12) {
             // Undo/Redo and Transform buttons
-            HStack(spacing: 8) {
-                Button {
-                    appState.undo()
-                } label: {
-                    Label("Undo", systemImage: "arrow.uturn.backward")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.bordered)
-                .disabled(!appState.canUndo)
-                .help("Undo (⌘Z)")
-
-                Button {
-                    appState.redo()
-                } label: {
-                    Label("Redo", systemImage: "arrow.uturn.forward")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.bordered)
-                .disabled(!appState.canRedo)
-                .help("Redo (⇧⌘Z)")
-
-                Spacer()
-
-                // Rotation buttons
-                Button {
-                    appState.rotateActiveImage(clockwise: false)
-                } label: {
-                    Label("Rotate Left", systemImage: "rotate.left")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.bordered)
-                .disabled(appState.activeImage == nil)
-                .help("Rotate CCW (⌘[)")
-
-                Button {
-                    appState.rotateActiveImage(clockwise: true)
-                } label: {
-                    Label("Rotate Right", systemImage: "rotate.right")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.bordered)
-                .disabled(appState.activeImage == nil)
-                .help("Rotate CW (⌘])")
-
-                // Flip buttons
-                Button {
-                    appState.flipActiveImage(horizontal: true)
-                } label: {
-                    Label("Flip H", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.bordered)
-                .disabled(appState.activeImage == nil)
-                .help("Flip Horizontal")
-
-                Button {
-                    appState.flipActiveImage(horizontal: false)
-                } label: {
-                    Label("Flip V", systemImage: "arrow.up.and.down.righttriangle.up.righttriangle.down")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.bordered)
-                .disabled(appState.activeImage == nil)
-                .help("Flip Vertical")
-            }
+            // Undo/redo and transform buttons removed — see plan §2.2 (AppState surgery).
+            // Wave 5 may reintroduce rotation if per-image orientation becomes relevant before analysis.
 
             Divider()
 
@@ -310,14 +244,7 @@ struct ActionButtonsView: View {
         }
 
         do {
-            let results: [URL]
-
-            if rename {
-                // Export with renamed files to avoid overwriting
-                results = try await appState.processAndExportWithRename(images: images, to: outputDirectory)
-            } else {
-                results = try await appState.processAndExport(images: images, to: outputDirectory)
-            }
+            let results = try await appState.processAndExport(images: images, to: outputDirectory)
 
             exportedCount = results.count
             lastExportDirectory = outputDirectory

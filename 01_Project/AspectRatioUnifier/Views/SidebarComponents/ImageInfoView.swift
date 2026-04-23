@@ -23,16 +23,6 @@ struct ImageInfoView: View {
                 .font(.callout)
             }
 
-            if appState.cropSettings.hasAnyCrop, let majority = appState.majorityResolution {
-                let newSize = appState.cropSettings.croppedSize(from: majority)
-                HStack {
-                    Text("Output size:")
-                    Spacer()
-                    Text("\(Int(newSize.width)) × \(Int(newSize.height))")
-                        .foregroundStyle(.green)
-                }
-                .font(.callout)
-            }
         }
     }
 }

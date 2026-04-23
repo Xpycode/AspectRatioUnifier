@@ -116,13 +116,6 @@ struct RenameSettings: Equatable, Codable {
     }
 }
 
-struct GridSettings: Equatable, Codable {
-    var isEnabled: Bool = false
-    var columns: Int = 2          // 1-10 range
-    var rows: Int = 2             // 1-10 range
-    var namingSuffix: String = "_{row}_{col}"  // tokens: {row}, {col}
-}
-
 struct ExportSettings: Equatable {
     var format: ExportFormat = .png
     var quality: Double = 0.9  // 0.0 to 1.0, only for JPEG/HEIC
@@ -131,8 +124,6 @@ struct ExportSettings: Equatable {
     var outputDirectory: OutputDirectory = .sameAsSource
     var resizeSettings: ResizeSettings = ResizeSettings()
     var renameSettings: RenameSettings = RenameSettings()
-    var watermarkSettings: WatermarkSettings = WatermarkSettings()
-    var gridSettings: GridSettings = GridSettings()
 
     enum OutputDirectory: Equatable {
         case sameAsSource
@@ -204,48 +195,15 @@ struct ExportSettings: Equatable {
         return outputDir.appendingPathComponent(newFilename)
     }
 
-    /// Generates the output URL for a grid tile
-    func outputURL(for inputURL: URL, index: Int, gridRow: Int, gridCol: Int) -> URL {
-        var base = outputURL(for: inputURL, index: index)
-        let suffix = gridSettings.namingSuffix
-            .replacingOccurrences(of: "{row}", with: "\(gridRow)")
-            .replacingOccurrences(of: "{col}", with: "\(gridCol)")
-        let baseName = base.deletingPathExtension().lastPathComponent
-        let ext = base.pathExtension
-        base = base.deletingLastPathComponent()
-            .appendingPathComponent("\(baseName)\(suffix)")
-            .appendingPathExtension(ext)
-        return base
-    }
-
     /// Checks if the output would overwrite the original
     func wouldOverwriteOriginal(for inputURL: URL) -> Bool {
         return outputURL(for: inputURL) == inputURL
     }
 
-    /// Checks if "Save in Place" mode is valid for the given settings
-    /// Returns nil if valid, or an error message explaining why it's blocked
-    func validateOverwriteMode(cornerRadiusEnabled: Bool, items: [ImageItem]) -> String? {
+    /// Checks if "Save in Place" mode is valid for the given settings.
+    /// Returns nil if valid, or an error message explaining why it's blocked.
+    func validateOverwriteMode(items: [ImageItem]) -> String? {
         guard outputDirectory.isOverwriteMode else { return nil }
-
-        // Grid split produces N tiles per image — can't overwrite 1 original with N files
-        if gridSettings.isEnabled && (gridSettings.rows > 1 || gridSettings.columns > 1) {
-            return "Grid split produces multiple tiles per image. Disable grid or use a different output mode."
-        }
-
-        // Corner radius requires PNG (transparency). Block if any original isn't PNG.
-        if cornerRadiusEnabled {
-            let nonPNGFiles = items.filter { item in
-                let ext = item.url.pathExtension.lowercased()
-                return ext != "png"
-            }
-            if !nonPNGFiles.isEmpty {
-                let count = nonPNGFiles.count
-                let fileWord = count == 1 ? "file" : "files"
-                return "Corner radius requires PNG format. \(count) \(fileWord) would need format conversion."
-            }
-        }
-
         return nil
     }
 
@@ -259,57 +217,26 @@ struct ExportSettings: Equatable {
     /// - Returns: nil if no collisions, otherwise the first colliding filename
     func findBatchCollision(items: [ImageItem]) -> String? {
         var plannedURLs = Set<URL>()
-        let grid = gridSettings
-
         for (index, item) in items.enumerated() {
-            if grid.isEnabled && (grid.rows > 1 || grid.columns > 1) {
-                for row in 1...grid.rows {
-                    for col in 1...grid.columns {
-                        let destURL = outputURL(for: item.url, index: index, gridRow: row, gridCol: col)
-                        if plannedURLs.contains(destURL) {
-                            return destURL.lastPathComponent
-                        }
-                        plannedURLs.insert(destURL)
-                    }
-                }
-            } else {
-                let destURL = outputURL(for: item.url, index: index)
-                if plannedURLs.contains(destURL) {
-                    return destURL.lastPathComponent
-                }
-                plannedURLs.insert(destURL)
+            let destURL = outputURL(for: item.url, index: index)
+            if plannedURLs.contains(destURL) {
+                return destURL.lastPathComponent
             }
+            plannedURLs.insert(destURL)
         }
-
         return nil
     }
 
     /// Finds files that would be overwritten during export
-    /// - Parameter items: The items to be exported
-    /// - Returns: Array of (index, URL) for files that already exist
     func findExistingFiles(items: [ImageItem]) -> [(index: Int, url: URL)] {
         let fileManager = FileManager.default
         var existing: [(Int, URL)] = []
-        let grid = gridSettings
-
         for (index, item) in items.enumerated() {
-            if grid.isEnabled && (grid.rows > 1 || grid.columns > 1) {
-                for row in 1...grid.rows {
-                    for col in 1...grid.columns {
-                        let destURL = outputURL(for: item.url, index: index, gridRow: row, gridCol: col)
-                        if fileManager.fileExists(atPath: destURL.path) {
-                            existing.append((index, destURL))
-                        }
-                    }
-                }
-            } else {
-                let destURL = outputURL(for: item.url, index: index)
-                if fileManager.fileExists(atPath: destURL.path) {
-                    existing.append((index, destURL))
-                }
+            let destURL = outputURL(for: item.url, index: index)
+            if fileManager.fileExists(atPath: destURL.path) {
+                existing.append((index, destURL))
             }
         }
-
         return existing
     }
 
@@ -433,8 +360,6 @@ struct ExportSettingsCodable: Codable, Equatable {
     var preserveOriginalFormat: Bool
     var resizeSettings: ResizeSettings
     var renameSettings: RenameSettings
-    var watermarkSettings: WatermarkSettings?  // Optional for backward compatibility with existing profiles
-    var gridSettings: GridSettings?  // Optional for backward compatibility with existing profiles
 
     init(from settings: ExportSettings) {
         self.format = settings.format
@@ -443,14 +368,10 @@ struct ExportSettingsCodable: Codable, Equatable {
         self.preserveOriginalFormat = settings.preserveOriginalFormat
         self.resizeSettings = settings.resizeSettings
         self.renameSettings = settings.renameSettings
-        // Only persist watermark if enabled (avoid bloating profiles with default disabled state)
-        self.watermarkSettings = settings.watermarkSettings.isEnabled ? settings.watermarkSettings : nil
-        // Only persist grid if enabled (avoid bloating profiles with default disabled state)
-        self.gridSettings = settings.gridSettings.isEnabled ? settings.gridSettings : nil
     }
 
     func toExportSettings() -> ExportSettings {
-        var settings = ExportSettings(
+        ExportSettings(
             format: format,
             quality: quality,
             suffix: suffix,
@@ -458,15 +379,6 @@ struct ExportSettingsCodable: Codable, Equatable {
             resizeSettings: resizeSettings,
             renameSettings: renameSettings
         )
-        // Restore watermark settings if present
-        if let watermark = watermarkSettings {
-            settings.watermarkSettings = watermark
-        }
-        // Restore grid settings if present
-        if let grid = gridSettings {
-            settings.gridSettings = grid
-        }
-        return settings
     }
 }
 

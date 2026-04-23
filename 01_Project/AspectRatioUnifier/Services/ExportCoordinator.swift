@@ -113,18 +113,13 @@ final class ExportCoordinator {
         }
     }
 
-    /// Performs the actual export operation
+    /// Performs the actual export operation.
+    /// v1 does not split rename-on-collision from plain export; the pipeline always overwrites cleanly or errors.
     func executeExport(_ images: [ImageItem], to outputDirectory: URL, rename: Bool) async {
         guard let appState else { return }
 
         do {
-            let results: [URL]
-
-            if rename {
-                results = try await appState.processAndExportWithRename(images: images, to: outputDirectory)
-            } else {
-                results = try await appState.processAndExport(images: images, to: outputDirectory)
-            }
+            let results = try await appState.processAndExport(images: images, to: outputDirectory)
 
             exportedCount = results.count
             showSuccessAlert = true

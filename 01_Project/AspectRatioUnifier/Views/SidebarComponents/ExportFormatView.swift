@@ -24,13 +24,6 @@ struct ExportFormatView: View {
                 }
             }
             .controlSize(.small)
-            .disabled(appState.cropSettings.cornerRadiusEnabled)
-        }
-
-        if appState.cropSettings.cornerRadiusEnabled {
-            Text("PNG required for corner radius")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
 
         // Naming selection (hidden in save-in-place mode)

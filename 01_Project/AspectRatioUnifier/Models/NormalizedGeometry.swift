@@ -373,20 +373,7 @@ extension NormalizedRect {
     }
 }
 
-// MARK: - Crop Settings Integration
-
 extension NormalizedRect {
-    /// Create a normalized rect representing the crop area
-    static func cropArea(from settings: CropSettings, imageSize: CGSize) -> NormalizedRect {
-        let pixelRect = CGRect(
-            x: CGFloat(settings.cropLeft),
-            y: CGFloat(settings.cropTop),
-            width: imageSize.width - CGFloat(settings.cropLeft + settings.cropRight),
-            height: imageSize.height - CGFloat(settings.cropTop + settings.cropBottom)
-        )
-        return fromPixels(pixelRect, imageSize: imageSize)
-    }
-
     /// Transform this rect to be relative to a crop area
     /// (i.e., convert from pre-crop to post-crop coordinates)
     func relativeToCrop(_ cropArea: NormalizedRect) -> NormalizedRect? {

@@ -209,29 +209,13 @@ struct CLIHandler {
             return 1
         }
 
-        // Create settings
-        let cropSettings = CropSettings(
-            cropTop: options.cropTop,
-            cropBottom: options.cropBottom,
-            cropLeft: options.cropLeft,
-            cropRight: options.cropRight
-        )
-
+        // v1 CLI: resize + format conversion only. Crop/grid options from CropBatch's CLI surface
+        // are parsed but ignored until the ratio-driven pipeline lands (Wave 5+).
         var exportSettings = ExportSettings(
             format: options.format,
             quality: options.quality,
             suffix: options.suffix
         )
-
-        // Enable grid split if rows or cols > 1
-        if options.gridRows > 1 || options.gridCols > 1 {
-            exportSettings.gridSettings = GridSettings(
-                isEnabled: true,
-                columns: options.gridCols,
-                rows: options.gridRows,
-                namingSuffix: options.gridSuffix
-            )
-        }
 
         if let outputDir = options.outputDir {
             let expandedPath = (outputDir as NSString).expandingTildeInPath
@@ -267,10 +251,9 @@ struct CLIHandler {
         do {
             let outputURLs = try await ImageCropService.batchCrop(
                 items: items,
-                cropSettings: cropSettings,
                 exportSettings: exportSettings
-            ) { progress in
-                // Progress is handled silently in CLI mode
+            ) { _ in
+                // Progress handled silently in CLI mode
             }
 
             print("Successfully exported \(outputURLs.count) file(s):")

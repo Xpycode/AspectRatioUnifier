@@ -10,10 +10,7 @@ struct SaveInPlaceSection: View {
     }
 
     private var validationError: String? {
-        appState.exportSettings.validateOverwriteMode(
-            cornerRadiusEnabled: appState.cropSettings.cornerRadiusEnabled,
-            items: appState.images
-        )
+        appState.exportSettings.validateOverwriteMode(items: appState.images)
     }
 
     var body: some View {

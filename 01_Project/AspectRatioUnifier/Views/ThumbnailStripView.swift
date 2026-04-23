@@ -271,7 +271,6 @@ struct ThumbnailItemView: View {
 
     @State private var isHovering = false
     @State private var isTargeted = false
-    @State private var showQuickExport = false
 
     private var isActive: Bool {
         appState.activeImageID == item.id
@@ -281,10 +280,6 @@ struct ThumbnailItemView: View {
         appState.mismatchedImages.contains { $0.id == item.id }
     }
 
-    private var hasBlurRegions: Bool {
-        appState.blurRegionsForImage(item.id).count > 0
-    }
-
     private var backgroundColor: Color {
         if isActive {
             return Color.accentColor.opacity(0.1)
@@ -292,16 +287,6 @@ struct ThumbnailItemView: View {
             return Color.gray.opacity(0.1)
         }
         return Color.clear
-    }
-
-    /// The thumbnail image with any transforms applied
-    private var displayedThumbnail: NSImage {
-        let transform = appState.globalTransform
-        if transform.isIdentity {
-            return item.originalImage
-        }
-        // Fall back to original if transform fails
-        return (try? ImageCropService.applyTransform(item.originalImage, transform: transform)) ?? item.originalImage
     }
 
     var body: some View {
@@ -317,12 +302,6 @@ struct ThumbnailItemView: View {
             .draggable(item.id.uuidString) { dragPreview }
             .dropDestination(for: String.self, action: handleDrop, isTargeted: { isTargeted = $0 })
             .contextMenu { contextMenuItems }
-            .fileExporter(
-                isPresented: $showQuickExport,
-                document: makeExportDocument(),
-                contentType: appState.exportSettings.format.utType,
-                defaultFilename: appState.exportSettings.outputFilename(for: item.url)
-            ) { _ in }
     }
 
     private var thumbnailContent: some View {
@@ -334,33 +313,19 @@ struct ThumbnailItemView: View {
 
     private var thumbnailImage: some View {
         ZStack(alignment: .topTrailing) {
-            Image(nsImage: displayedThumbnail)
+            Image(nsImage: item.originalImage)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 100, height: 70)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
-                .overlay(cropOverlay)
                 .overlay(selectionBorder)
 
-            // Badges stack
             VStack(spacing: 2) {
                 if isMismatched {
                     mismatchBadge
                 }
-                // Blur badge disabled for now
-                // if hasBlurRegions {
-                //     blurBadge
-                // }
             }
             .offset(x: 4, y: -4)
-        }
-    }
-
-    @ViewBuilder
-    private var cropOverlay: some View {
-        if appState.cropSettings.hasAnyCrop {
-            ThumbnailCropOverlay(imageSize: item.originalSize, cropSettings: appState.cropSettings)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
         }
     }
 
@@ -373,13 +338,6 @@ struct ThumbnailItemView: View {
         Image(systemName: "exclamationmark.triangle.fill")
             .font(.caption)
             .foregroundStyle(.yellow)
-            .background(Circle().fill(Color.black.opacity(0.6)).padding(-2))
-    }
-
-    private var blurBadge: some View {
-        Image(systemName: "eye.slash.fill")
-            .font(.caption2)
-            .foregroundStyle(.blue)
             .background(Circle().fill(Color.black.opacity(0.6)).padding(-2))
     }
 
@@ -413,11 +371,6 @@ struct ThumbnailItemView: View {
     private var contextMenuItems: some View {
         Button("Set as Active") { appState.setActiveImage(item.id) }
         Divider()
-        Button("Copy Cropped to Clipboard") { copyToClipboard() }
-            .disabled(!appState.cropSettings.hasAnyCrop)
-        Button("Quick Export...") { showQuickExport = true }
-            .disabled(!appState.cropSettings.hasAnyCrop)
-        Divider()
         Button("Remove", role: .destructive) { appState.removeImages(ids: [item.id]) }
     }
 
@@ -430,128 +383,6 @@ struct ThumbnailItemView: View {
         appState.reorderImage(id: sourceID, toIndex: targetIndex)
         draggedItem = nil
         return true
-    }
-
-    private func makeExportDocument() -> CroppedImageDocument {
-        CroppedImageDocument(
-            image: item.originalImage,
-            cropSettings: appState.cropSettings,
-            exportSettings: appState.exportSettings
-        )
-    }
-
-    private func copyToClipboard() {
-        do {
-            let cropped = try ImageCropService.crop(item.originalImage, with: appState.cropSettings)
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.writeObjects([cropped])
-        } catch {
-            AspectRatioUnifierLogger.ui.error("Copy failed: \(error.localizedDescription)")
-        }
-    }
-}
-
-// MARK: - Document for Quick Export
-
-struct CroppedImageDocument: FileDocument {
-    static let readableContentTypes: [UTType] = [.png, .jpeg]
-
-    let image: NSImage
-    let cropSettings: CropSettings
-    let exportSettings: ExportSettings
-
-    init(image: NSImage, cropSettings: CropSettings, exportSettings: ExportSettings) {
-        self.image = image
-        self.cropSettings = cropSettings
-        self.exportSettings = exportSettings
-    }
-
-    init(configuration: ReadConfiguration) throws {
-        fatalError("Reading not supported")
-    }
-
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let cropped = try ImageCropService.crop(image, with: cropSettings)
-        guard let data = ImageCropService.encode(cropped, format: exportSettings.format, quality: exportSettings.quality) else {
-            throw NSError(domain: "AspectRatioUnifier", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to encode image"])
-        }
-        return FileWrapper(regularFileWithContents: data)
-    }
-}
-
-struct ThumbnailCropOverlay: View {
-    let imageSize: CGSize
-    let cropSettings: CropSettings
-
-    var body: some View {
-        GeometryReader { geometry in
-            let scaleX = geometry.size.width / imageSize.width
-            let scaleY = geometry.size.height / imageSize.height
-            let scale = min(scaleX, scaleY)
-
-            let displayedWidth = imageSize.width * scale
-            let displayedHeight = imageSize.height * scale
-            let offsetX = (geometry.size.width - displayedWidth) / 2
-            let offsetY = (geometry.size.height - displayedHeight) / 2
-
-            ZStack {
-                // Calculate the middle section (between top and bottom crops)
-                let middleTop = offsetY + CGFloat(cropSettings.cropTop) * scale
-                let middleHeight = displayedHeight - CGFloat(cropSettings.cropTop + cropSettings.cropBottom) * scale
-                let middleCenterY = middleTop + middleHeight / 2
-
-                // Top
-                if cropSettings.cropTop > 0 {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.5))
-                        .frame(width: displayedWidth, height: CGFloat(cropSettings.cropTop) * scale)
-                        .position(
-                            x: offsetX + displayedWidth / 2,
-                            y: offsetY + CGFloat(cropSettings.cropTop) * scale / 2
-                        )
-                }
-
-                // Bottom
-                if cropSettings.cropBottom > 0 {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.5))
-                        .frame(width: displayedWidth, height: CGFloat(cropSettings.cropBottom) * scale)
-                        .position(
-                            x: offsetX + displayedWidth / 2,
-                            y: offsetY + displayedHeight - CGFloat(cropSettings.cropBottom) * scale / 2
-                        )
-                }
-
-                // Left (middle section only)
-                if cropSettings.cropLeft > 0 {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.5))
-                        .frame(
-                            width: CGFloat(cropSettings.cropLeft) * scale,
-                            height: middleHeight
-                        )
-                        .position(
-                            x: offsetX + CGFloat(cropSettings.cropLeft) * scale / 2,
-                            y: middleCenterY
-                        )
-                }
-
-                // Right (middle section only)
-                if cropSettings.cropRight > 0 {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.5))
-                        .frame(
-                            width: CGFloat(cropSettings.cropRight) * scale,
-                            height: middleHeight
-                        )
-                        .position(
-                            x: offsetX + displayedWidth - CGFloat(cropSettings.cropRight) * scale / 2,
-                            y: middleCenterY
-                        )
-                }
-            }
-        }
-        .allowsHitTesting(false)
     }
 }
 

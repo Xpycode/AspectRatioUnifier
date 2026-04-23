@@ -18,15 +18,10 @@ struct FileSizeEstimate {
 
 struct FileSizeEstimator {
 
-    /// Estimates the output file sizes based on crop and export settings
-    /// - Parameters:
-    ///   - images: Source images with their file sizes
-    ///   - cropSettings: Current crop settings
-    ///   - exportSettings: Export format and quality settings
-    /// - Returns: File size estimate with totals and per-image breakdown
+    /// Estimates the output file sizes based on export settings.
+    /// v1 ignores crop reduction (the ratio-batch pipeline does scale + center-crop later).
     static func estimate(
         images: [ImageItem],
-        cropSettings: CropSettings,
         exportSettings: ExportSettings
     ) -> FileSizeEstimate {
         var perImageEstimates: [(original: Int64, estimated: Int64)] = []
@@ -37,7 +32,6 @@ struct FileSizeEstimator {
             let originalSize = image.fileSize
             let estimated = estimateOutputSize(
                 for: image,
-                cropSettings: cropSettings,
                 exportSettings: exportSettings
             )
 
@@ -58,23 +52,19 @@ struct FileSizeEstimator {
         )
     }
 
-    /// Estimates output size for a single image
+    /// Estimates output size for a single image.
     private static func estimateOutputSize(
         for image: ImageItem,
-        cropSettings: CropSettings,
         exportSettings: ExportSettings
     ) -> Int64 {
         let originalFileSize = image.fileSize
         guard originalFileSize > 0 else { return 0 }
 
-        // 1. Calculate pixel reduction ratio from cropping
         let originalPixels = image.originalSize.width * image.originalSize.height
-        let croppedSize = cropSettings.croppedSize(from: image.originalSize)
-        var outputPixels = croppedSize.width * croppedSize.height
+        var outputPixels = originalPixels
 
-        // 2. Apply resize if enabled (resize happens AFTER crop)
         if let resizedSize = ImageCropService.calculateResizedSize(
-            from: croppedSize,
+            from: image.originalSize,
             with: exportSettings.resizeSettings
         ) {
             outputPixels = resizedSize.width * resizedSize.height

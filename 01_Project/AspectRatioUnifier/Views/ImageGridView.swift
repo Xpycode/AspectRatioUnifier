@@ -73,14 +73,6 @@ struct ImageThumbnailView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(maxHeight: 150)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        if appState.cropSettings.hasAnyCrop {
-                            CropPreviewOverlay(
-                                imageSize: item.originalSize,
-                                cropSettings: appState.cropSettings
-                            )
-                        }
-                    }
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -125,83 +117,6 @@ struct ImageThumbnailView: View {
                 appState.selectedImageIDs.insert(item.id)
             }
         }
-    }
-}
-
-struct CropPreviewOverlay: View {
-    let imageSize: CGSize
-    let cropSettings: CropSettings
-
-    var body: some View {
-        GeometryReader { geometry in
-            let scaleX = geometry.size.width / imageSize.width
-            let scaleY = geometry.size.height / imageSize.height
-            let scale = min(scaleX, scaleY)
-
-            let displayedWidth = imageSize.width * scale
-            let displayedHeight = imageSize.height * scale
-            let offsetX = (geometry.size.width - displayedWidth) / 2
-            let offsetY = (geometry.size.height - displayedHeight) / 2
-
-            ZStack {
-                // Top crop area
-                if cropSettings.cropTop > 0 {
-                    Rectangle()
-                        .fill(Color.red.opacity(0.3))
-                        .frame(
-                            width: displayedWidth,
-                            height: CGFloat(cropSettings.cropTop) * scale
-                        )
-                        .position(
-                            x: offsetX + displayedWidth / 2,
-                            y: offsetY + CGFloat(cropSettings.cropTop) * scale / 2
-                        )
-                }
-
-                // Bottom crop area
-                if cropSettings.cropBottom > 0 {
-                    Rectangle()
-                        .fill(Color.red.opacity(0.3))
-                        .frame(
-                            width: displayedWidth,
-                            height: CGFloat(cropSettings.cropBottom) * scale
-                        )
-                        .position(
-                            x: offsetX + displayedWidth / 2,
-                            y: offsetY + displayedHeight - CGFloat(cropSettings.cropBottom) * scale / 2
-                        )
-                }
-
-                // Left crop area
-                if cropSettings.cropLeft > 0 {
-                    Rectangle()
-                        .fill(Color.red.opacity(0.3))
-                        .frame(
-                            width: CGFloat(cropSettings.cropLeft) * scale,
-                            height: displayedHeight - CGFloat(cropSettings.cropTop + cropSettings.cropBottom) * scale
-                        )
-                        .position(
-                            x: offsetX + CGFloat(cropSettings.cropLeft) * scale / 2,
-                            y: offsetY + displayedHeight / 2
-                        )
-                }
-
-                // Right crop area
-                if cropSettings.cropRight > 0 {
-                    Rectangle()
-                        .fill(Color.red.opacity(0.3))
-                        .frame(
-                            width: CGFloat(cropSettings.cropRight) * scale,
-                            height: displayedHeight - CGFloat(cropSettings.cropTop + cropSettings.cropBottom) * scale
-                        )
-                        .position(
-                            x: offsetX + displayedWidth - CGFloat(cropSettings.cropRight) * scale / 2,
-                            y: offsetY + displayedHeight / 2
-                        )
-                }
-            }
-        }
-        .allowsHitTesting(false)
     }
 }
 

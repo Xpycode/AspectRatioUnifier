@@ -48,10 +48,7 @@ struct ExportFooterView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
                 .controlSize(.large)
-                .disabled(!appState.canExport || appState.exportSettings.validateOverwriteMode(
-                    cornerRadiusEnabled: appState.cropSettings.cornerRadiusEnabled,
-                    items: imagesToProcess
-                ) != nil)
+                .disabled(!appState.canExport || appState.exportSettings.validateOverwriteMode(items: imagesToProcess) != nil)
             } else {
                 // Normal export - folder picker
                 Button {

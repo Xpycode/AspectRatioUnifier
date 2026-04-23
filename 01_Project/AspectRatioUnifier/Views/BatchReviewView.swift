@@ -90,8 +90,7 @@ struct BatchReviewView: View {
                 ForEach(previews) { item in
                     PreviewItemView(
                         item: item,
-                        isSelected: selectedIDs.contains(item.id),
-                        gridSettings: appState.exportSettings.gridSettings
+                        isSelected: selectedIDs.contains(item.id)
                     ) {
                         toggleSelection(item.id)
                     }
@@ -117,14 +116,6 @@ struct BatchReviewView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if appState.exportSettings.gridSettings.isEnabled {
-                    let grid = appState.exportSettings.gridSettings
-                    let tilesPerImage = grid.rows * grid.columns
-                    let totalFiles = selectedIDs.count * tilesPerImage
-                    Text("\(selectedIDs.count) images × \(tilesPerImage) tiles = \(totalFiles) files")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Spacer()
@@ -135,11 +126,7 @@ struct BatchReviewView: View {
             }
             .keyboardShortcut(.cancelAction)
 
-            let gridActive = appState.exportSettings.gridSettings.isEnabled &&
-                (appState.exportSettings.gridSettings.rows > 1 || appState.exportSettings.gridSettings.columns > 1)
-            let fileCount = gridActive ?
-                selectedIDs.count * appState.exportSettings.gridSettings.rows * appState.exportSettings.gridSettings.columns :
-                selectedIDs.count
+            let fileCount = selectedIDs.count
             Button("Export \(fileCount) \(fileCount == 1 ? "File" : "Files")") {
                 let selectedImages = images.filter { selectedIDs.contains($0.id) }
                 onConfirm(selectedImages)
@@ -163,55 +150,35 @@ struct BatchReviewView: View {
     }
 
     private func generatePreviews() async {
+        // v1: preview mirrors the export pipeline, which is resize-only.
+        // Wave 5 replaces this with the ratio-driven scale-to-fill + center-crop.
         var items: [PreviewItem] = []
 
         for image in images {
             do {
-                // Apply full processing pipeline to match export output
                 let processed = try await generatePreview(for: image)
-                let croppedSize = appState.cropSettings.croppedSize(from: image.originalSize)
-
                 items.append(PreviewItem(
                     id: image.id,
                     filename: image.filename,
                     originalImage: image.originalImage,
                     croppedImage: processed,
-                    croppedSize: croppedSize
+                    croppedSize: processed.size
                 ))
             } catch {
-                // Skip images that fail to process
                 continue
             }
         }
 
         await MainActor.run {
             previews = items
-            selectedIDs = Set(items.map { $0.id })  // Select all by default
+            selectedIDs = Set(items.map { $0.id })
             isGenerating = false
         }
     }
 
-    /// Generates a preview by applying the full processing pipeline
-    /// Matches the export pipeline: Transform -> Blur -> Crop -> Resize
     private func generatePreview(for item: ImageItem) async throws -> NSImage {
         var result = item.originalImage
 
-        // 1. Apply transforms (rotation, flip) - global transform applies to all
-        if !appState.imageTransform.isIdentity {
-            result = try ImageCropService.applyTransform(result, transform: appState.imageTransform)
-        }
-
-        // 2. Apply blur regions
-        if let blurData = appState.blurRegions[item.id], !blurData.regions.isEmpty {
-            result = ImageCropService.applyBlurRegions(result, regions: blurData.regions)
-        }
-
-        // 3. Apply crop
-        if appState.cropSettings.hasAnyCrop {
-            result = try ImageCropService.crop(result, with: appState.cropSettings)
-        }
-
-        // 4. Apply resize if enabled
         if appState.exportSettings.resizeSettings.isEnabled,
            let targetSize = ImageCropService.calculateResizedSize(
                from: result.size,
@@ -239,14 +206,9 @@ struct PreviewItem: Identifiable {
 struct PreviewItemView: View {
     let item: PreviewItem
     let isSelected: Bool
-    let gridSettings: GridSettings
     let onToggle: () -> Void
 
     @State private var showOriginal = false
-
-    private var gridActive: Bool {
-        gridSettings.isEnabled && (gridSettings.rows > 1 || gridSettings.columns > 1)
-    }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -257,30 +219,6 @@ struct PreviewItemView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        // Grid lines on cropped preview
-                        if !showOriginal && gridActive {
-                            GeometryReader { geo in
-                                Path { path in
-                                    let w = geo.size.width
-                                    let h = geo.size.height
-                                    for col in 1..<gridSettings.columns {
-                                        let x = w * CGFloat(col) / CGFloat(gridSettings.columns)
-                                        path.move(to: CGPoint(x: x, y: 0))
-                                        path.addLine(to: CGPoint(x: x, y: h))
-                                    }
-                                    for row in 1..<gridSettings.rows {
-                                        let y = h * CGFloat(row) / CGFloat(gridSettings.rows)
-                                        path.move(to: CGPoint(x: 0, y: y))
-                                        path.addLine(to: CGPoint(x: w, y: y))
-                                    }
-                                }
-                                .stroke(Color.yellow.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .allowsHitTesting(false)
-                        }
-                    }
                     .overlay {
                         RoundedRectangle(cornerRadius: 8)
                             .strokeBorder(isSelected ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: isSelected ? 3 : 1)
