@@ -2,4 +2,4 @@
 
 | Date | Focus | Link |
 |------|-------|------|
-| 2026-04-23 | Project scaffold + first session log | [2026-04-23](2026-04-23.md) |
+| 2026-04-23 | Plan + Wave 1 clone-rename + Wave 2 strip (CropBatch → ARU) | [2026-04-23](2026-04-23.md) |
