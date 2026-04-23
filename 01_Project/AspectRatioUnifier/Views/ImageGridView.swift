@@ -4,7 +4,7 @@ struct ImageGridView: View {
     @Environment(AppState.self) private var appState
 
     private let columns = [
-        GridItem(.adaptive(minimum: 180, maximum: 250), spacing: 16)
+        GridItem(.adaptive(minimum: 180), spacing: 16)
     ]
 
     /// Filter by ratioFilter (empty = all), then sort by aspect ratio ascending.
