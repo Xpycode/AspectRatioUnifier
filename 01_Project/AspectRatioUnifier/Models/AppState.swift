@@ -99,6 +99,17 @@ final class AppState {
             exportSettings.format = format
             selectedPresetID = nil
         }
+
+        // TODO: Wave 4 — replace with AppState.buckets + HistogramView
+        let items = imageManager.images
+        Task {
+            let clock = ContinuousClock()
+            let start = clock.now
+            let buckets = await RatioAnalyzer().analyze(items: items)
+            let elapsed = start.duration(to: clock.now)
+            let summary = buckets.map { "\($0.items.count)× \($0.label) @ \(Int($0.medianSize.width))×\(Int($0.medianSize.height))" }.joined(separator: ", ")
+            AspectRatioUnifierLogger.storage.info("RatioAnalyzer: \(buckets.count) buckets in \(elapsed) — \(summary, privacy: .public)")
+        }
     }
 
     @MainActor
