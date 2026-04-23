@@ -148,23 +148,53 @@ struct SidebarView: View {
 struct RatioFilterChips: View {
     @Environment(AppState.self) private var appState
 
+    /// Keeps the toolbar from overflowing on archives with many ratios. Actives
+    /// always make it into the visible set so the user never loses sight of
+    /// their own filter state; the rest go into an overflow Menu.
+    private let maxVisibleChips = 6
+
+    private var orderedBuckets: [AspectRatioBucket] {
+        // Actives first, then remaining by descending count (RatioAnalyzer
+        // emits count-descending already, so that order is preserved).
+        let actives = appState.buckets.filter { appState.isFilterActive(for: $0) }
+        let inactives = appState.buckets.filter { !appState.isFilterActive(for: $0) }
+        return actives + inactives
+    }
+
+    private var visibleBuckets: [AspectRatioBucket] {
+        Array(orderedBuckets.prefix(maxVisibleChips))
+    }
+
+    private var overflowBuckets: [AspectRatioBucket] {
+        Array(orderedBuckets.dropFirst(maxVisibleChips))
+    }
+
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(appState.buckets) { bucket in
-                let active = appState.isFilterActive(for: bucket)
-                Button {
-                    appState.toggleFilter(for: bucket)
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(bucket.label)
-                            .font(.system(size: 11, weight: .medium))
-                        Text("\(bucket.items.count)×")
-                            .font(.system(size: 10, weight: .regular))
-                            .foregroundStyle(.secondary)
+            ForEach(visibleBuckets) { bucket in
+                chip(for: bucket)
+            }
+
+            if !overflowBuckets.isEmpty {
+                Menu {
+                    ForEach(overflowBuckets) { bucket in
+                        Button {
+                            appState.toggleFilter(for: bucket)
+                        } label: {
+                            if appState.isFilterActive(for: bucket) {
+                                Label("\(bucket.label) — \(bucket.items.count)×", systemImage: "checkmark")
+                            } else {
+                                Text("\(bucket.label) — \(bucket.items.count)×")
+                            }
+                        }
                     }
+                } label: {
+                    Text("+\(overflowBuckets.count)")
+                        .font(.system(size: 11, weight: .medium))
                 }
-                .buttonStyle(FCPToolbarButtonStyle(isOn: active))
-                .help("Filter grid to \(bucket.label) (\(bucket.items.count) images)")
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("\(overflowBuckets.count) more aspect ratio\(overflowBuckets.count == 1 ? "" : "s")")
             }
 
             if !appState.ratioFilter.isEmpty {
@@ -181,6 +211,24 @@ struct RatioFilterChips: View {
             }
         }
         .buttonStyle(.borderless)
+    }
+
+    @ViewBuilder
+    private func chip(for bucket: AspectRatioBucket) -> some View {
+        let active = appState.isFilterActive(for: bucket)
+        Button {
+            appState.toggleFilter(for: bucket)
+        } label: {
+            HStack(spacing: 4) {
+                Text(bucket.label)
+                    .font(.system(size: 11, weight: .medium))
+                Text("\(bucket.items.count)×")
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .buttonStyle(FCPToolbarButtonStyle(isOn: active))
+        .help("Filter grid to \(bucket.label) (\(bucket.items.count) images)")
     }
 }
 
