@@ -11,8 +11,8 @@
 ## Current Position
 - **Funnel:** build
 - **Phase:** implementation
-- **Focus:** Wave 5 — batch crop-resize preview + export wiring
-- **Status:** ready (Waves 1–4 merged to `main`)
+- **Focus:** Wave 5 shipped — crop-fill pipeline + preview grid + auto-commit histogram; Wave 6 (Preferences + app-shell audit) next
+- **Status:** ready (Waves 1–5 merged to `main`; awaiting live verification on 529-image archive)
 - **Last updated:** 2026-04-23
 
 ## Funnel Progress (Ralph-style)
@@ -25,21 +25,21 @@
 
 ## Phase Progress
 ```
-[#############.......] 67% - 4 of 6 waves complete (clone + strip + analysis + histogram)
+[################....] 83% - 5 of 6 waves complete (clone + strip + analysis + histogram + preview/export)
 ```
 
 | Phase | Status | Tasks |
 |-------|--------|-------|
 | Discovery | ✓ | Problem framed, name chosen, algorithm (B + A fast path) chosen |
 | Planning | ✓ | Reuse map, new-module sketches, 6-wave execution, 3 decisions |
-| Implementation | active | Wave 1 ✓ · Wave 2 ✓ · Wave 3 ✓ · Wave 4 ✓ · Wave 5 next · Wave 6 pending |
+| Implementation | active | Wave 1 ✓ · Wave 2 ✓ · Wave 3 ✓ · Wave 4 ✓ · Wave 5 ✓ · Wave 6 pending |
 | Polish | pending | Preferences pane + app-shell audit (Wave 6) |
 
 ## Readiness
 
 | Dimension | Status | Notes |
 |-----------|--------|-------|
-| Features | 🔶 WIP | Import + analysis + histogram picker done; crop-fill export + preview badges pending |
+| Features | 🔶 WIP | Import + analysis + histogram picker + crop-fill export + preview badges done; needs live verification on 529-image archive |
 | UI/Polish | 🔶 WIP | Theme + App Shell inherited from CropBatch; sidebar is Wave-4 placeholder |
 | Testing | ⚪ — | Needs mixed-ratio fixture set |
 | Docs | ✓ | Directions, plan, decisions, CLAUDE.md all current |
@@ -57,6 +57,9 @@
 - 2026-04-23: Bucketing tolerance — ±1%, user-adjustable in Preferences (Wave 6)
 - 2026-04-23: Tie-break — named-preset closeness → ±0.5% sub-bucket → ratio order
 - 2026-04-23: Upscale policy — flag + user-deselect (default include)
+- 2026-04-23: Ratio target — dedicated `ExportSettings.ratioTarget: CGSize?` (not a new `ResizeMode.fill` case); pipeline branches on non-nil
+- 2026-04-23: Exclusion state — `AppState.excludedImageIDs: Set<UUID>` (survives re-analysis; single source of truth)
+- 2026-04-23: Histogram commitment — bar tap auto-commits; no separate "Pick as target" button
 
 All entries in `decisions.md`.
 
@@ -75,7 +78,7 @@ None currently — the three originally blocking were all decided 2026-04-23.
 
 ## Resume
 
-Start Wave 5: batch crop-resize preview + export. Wire the sidebar "Pick as target" button to `exportSettings` and add the missing scale-fill + centre-crop path (plan §3.5 wants `.fill`; `ResizeMode` has no `.fill` case — current `RatioTargetResolver` returns `.exactSize` with a TODO comment, which letterboxes instead of filling). Adapt `BatchReviewView` → `PreviewGridView`; add `CropPreviewBadge` (dashed overlay of the crop box + ⚠ for upscales). Verified on a 217-image drop (2026-04-23): 24-bucket histogram renders, auto-pick lands on the largest bucket, readout shows target + label. See plan §3.4, §3.5 (resolver path), §4 Wave 5.
+Wave 5 shipped on `main` (commits `b2fb428`, `5f44042`). Pipeline: `ExportSettings.ratioTarget: CGSize?` → `ImageCropService.cropFill` scale-to-fill + centre-crop → `PreviewGridView` with live `CropPreviewBadge` overlays → exclusion filter on batch fan-out. Histogram bar-tap now the commitment. Build clean, app launched. Next: live drop-test with the 529-image archive in `TestImages/`, then Wave 6 (Preferences pane with ±1% tolerance slider + app-shell audit).
 
 ---
 *Updated by Claude. Source of truth for project position.*
