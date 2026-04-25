@@ -11,9 +11,9 @@
 ## Current Position
 - **Funnel:** build
 - **Phase:** implementation
-- **Focus:** Wave 6 + 6.5 shipped — resize/mismatch/thumb-strip pruned, opaque toolbar with smart trash, ratio-filter chips replace zoom, grid shows per-thumb ratio labels + ratio-ascending sort. Next: Wave 7 (unified export dialog + target-size-strategy min/median/max).
-- **Status:** ready (Waves 1–6.5 merged to `main`)
-- **Last updated:** 2026-04-23
+- **Focus:** Field-test pass + bug fixes shipped 2026-04-25 — preview-sheet legend & per-thumb upscale tooltip, chip strip cap raised to 10 with MRU rotation, bucketing rewritten to constrained-agglomerative (single-link chain + complete-link diameter cap), named-preset snap widened 0.2% → 2.5%. 530-image archive verified: 27 sim-buckets → 18 actual, 3:2 cluster consolidated 4 → 1 (407 imgs). Next: Wave 7 (unified export dialog + target-size-strategy Min/Median/Max — Min = user's "no-upscale" idea, default).
+- **Status:** ready (Waves 1–6.5 merged to `main`; 2026-04-25 changes uncommitted on working tree)
+- **Last updated:** 2026-04-25
 
 ## Funnel Progress (Ralph-style)
 
@@ -60,6 +60,10 @@
 - 2026-04-23: Ratio target — dedicated `ExportSettings.ratioTarget: CGSize?` (not a new `ResizeMode.fill` case); pipeline branches on non-nil
 - 2026-04-23: Exclusion state — `AppState.excludedImageIDs: Set<UUID>` (survives re-analysis; single source of truth)
 - 2026-04-23: Histogram commitment — bar tap auto-commits; no separate "Pick as target" button
+- 2026-04-25: Bucketing algorithm — constrained agglomerative (single-link chain `bucketTolerance=0.01` + complete-link diameter cap `bucketMaxSpan=0.05`)
+- 2026-04-25: Chip strip — top-10 by count on analysis, MRU rotation via +menu replaces rightmost slot, position stable across filter toggles
+- 2026-04-25: Named-preset snap widened 0.2% → 2.5%, sized to ~half the bucketMaxSpan so consolidation-drifted means still snap to "3:2"/"4:3"/etc. labels
+- 2026-04-25: Wave 7 default target-size strategy will be "Min" (largest non-upscaling size) — matches the photographer-cleaning-archives mindset
 
 All entries in `decisions.md`.
 

@@ -45,10 +45,18 @@ enum Config {
     // MARK: - Ratio Analysis
 
     enum Ratio {
-        /// ±1% tolerance for grouping images into the same bucket — §1.1 decision, user-overridable in Wave 6.
+        /// ±1% single-link threshold: max gap between two consecutive sorted ratios for them to chain
+        /// into the same bucket. §1.1 decision, user-overridable in Wave 6.
         static let bucketTolerance = 0.01
-        /// ±0.2% snap threshold: if a bucket's mean ratio is this close to a named preset, use the preset label.
-        static let namedPresetSnap = 0.002
+        /// ±5% complete-link diameter cap: max total span any single bucket may grow to. Stops the
+        /// chain from running across naturally-distinct clusters (4:3 → 3:2 → 16:10). Picked to cover
+        /// the ~4% scanner-noise width of a 35mm-scan 3:2 cluster.
+        static let bucketMaxSpan = 0.05
+        /// ±2.5% snap threshold: if a bucket's mean ratio is this close to a named preset, use the
+        /// preset label. Sized to roughly half the bucketMaxSpan so a bucket's center can drift
+        /// within its diameter and still snap. Safe because the named-preset list is sparse — the
+        /// gap from 4:3 (1.333) to 3:2 (1.5) is 12.5%, so a 2.5% snap never collides.
+        static let namedPresetSnap = 0.025
         /// Named aspect-ratio presets used for labelling and snap matching.
         static let namedPresets: [(ratio: Double, label: String)] = [
             (1.0,           "1:1"),

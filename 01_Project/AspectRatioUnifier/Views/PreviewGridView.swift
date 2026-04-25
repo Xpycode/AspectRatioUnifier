@@ -71,6 +71,15 @@ struct PreviewGridView: View {
                 Text(subtitleText(included: included, upscaleIncluded: upscaleIncluded, excluded: excluded))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if upscaleIncluded > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("marks images smaller than the target — hover for details")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.caption2)
+                }
             }
             Spacer()
         }
@@ -121,6 +130,7 @@ struct PreviewGridView: View {
                         }
                         .frame(height: 120)
                         .contentShape(Rectangle())
+                        .help(upscaleTooltip(source: item.originalSize, target: targetSize))
                         .onTapGesture {
                             appState.toggleExclusion(item.id)
                         }
@@ -140,6 +150,21 @@ struct PreviewGridView: View {
             }
             .padding()
         }
+    }
+
+    // MARK: - Tooltip
+
+    /// Returns "" for non-upscale (suppresses the tooltip); otherwise the
+    /// scale-to-fill upscale factor — `max(target.w/source.w, target.h/source.h)` —
+    /// since the larger of the two ratios determines how much the source must grow
+    /// before the smaller dimension overflows and gets cropped.
+    private func upscaleTooltip(source: CGSize, target: CGSize) -> String {
+        let sw = max(source.width, 1)
+        let sh = max(source.height, 1)
+        let scale = max(target.width / sw, target.height / sh)
+        guard scale > 1 else { return "" }
+        let pct = Int(((scale - 1) * 100).rounded())
+        return "Upscale \(Int(source.width)) × \(Int(source.height)) → \(Int(target.width)) × \(Int(target.height))  (+\(pct)%)"
     }
 
     // MARK: - Footer

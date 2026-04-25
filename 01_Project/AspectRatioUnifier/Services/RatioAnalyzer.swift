@@ -93,15 +93,23 @@ struct RatioAnalyzer {
         // Sort ascending by ratio so the greedy pass is O(n log n) total
         let sorted = probes.sorted { $0.ratio < $1.ratio }
 
-        // Greedy single-pass grouping: extend the current bucket while ratio
-        // is within ±bucketTolerance of the first member; open a new bucket otherwise.
+        // Constrained agglomerative clustering: extend the current bucket while
+        // (a) the gap to the previous member is within ±bucketTolerance (single-link
+        // chain — lets a naturally wide cluster of, e.g., scanner-noisy 3:2 photos
+        // consolidate), AND (b) the bucket's total span stays within ±bucketMaxSpan
+        // (complete-link diameter cap — prevents the chain from running across
+        // genuinely distinct ratios). Both guards are needed: chain-only over-merges,
+        // span-only fragments dense clouds wider than the tolerance.
+        let tol  = Config.Ratio.bucketTolerance
+        let span = Config.Ratio.bucketMaxSpan
         var groups: [[ProbeResult]] = []
         var current: [ProbeResult] = []
 
         for probe in sorted {
-            if let first = current.first {
-                let tol = Config.Ratio.bucketTolerance
-                if abs(probe.ratio - first.ratio) / max(probe.ratio, first.ratio) <= tol {
+            if let first = current.first, let last = current.last {
+                let gapToLast    = (probe.ratio - last.ratio)  / last.ratio
+                let proposedSpan = (probe.ratio - first.ratio) / first.ratio
+                if gapToLast <= tol && proposedSpan <= span {
                     current.append(probe)
                     continue
                 }

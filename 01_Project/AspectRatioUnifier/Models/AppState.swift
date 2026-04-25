@@ -29,6 +29,10 @@ final class AppState {
     var selectedBucketID: UUID?
     var excludedImageIDs: Set<UUID> = []
     var ratioFilter: Set<UUID> = []
+    /// Ordered IDs currently shown as chips in the toolbar. Initialized to the top-N
+    /// buckets by count on every re-analysis; user can promote an overflow bucket via
+    /// the +menu, which evicts the rightmost slot. Bounded to RatioFilterChips.maxVisible.
+    var chipOrder: [UUID] = []
 
     var selectedBucket: AspectRatioBucket? {
         guard let id = selectedBucketID else { return nil }
@@ -87,6 +91,18 @@ final class AppState {
             ratioFilter.remove(bucket.id)
         } else {
             ratioFilter.insert(bucket.id)
+        }
+    }
+
+    /// Promotes an overflow bucket into the chip strip's rightmost slot, evicting whatever
+    /// was there back into the +menu pool. No-op if the bucket is already a chip.
+    /// Caller still toggles the filter separately — promotion and selection are independent.
+    func promoteToChips(_ bucketID: UUID, max: Int) {
+        guard !chipOrder.contains(bucketID) else { return }
+        if chipOrder.count < max {
+            chipOrder.append(bucketID)
+        } else {
+            chipOrder[max - 1] = bucketID
         }
     }
 
@@ -175,6 +191,9 @@ final class AppState {
                     self.selectedBucketID = RatioTargetResolver().autoPick(from: buckets)?.id
                 }
                 self.ratioFilter = self.ratioFilter.filter { id in buckets.contains(where: { $0.id == id }) }
+                // Bucket UUIDs regenerate on every analysis, so any stale promotions are
+                // worthless — reset to the new top-N by count.
+                self.chipOrder = Array(buckets.prefix(10).map(\.id))
             }
         }
     }
@@ -188,6 +207,7 @@ final class AppState {
         imageManager.clearAll()
         excludedImageIDs.removeAll()
         ratioFilter.removeAll()
+        chipOrder.removeAll()
     }
 
     func setActiveImage(_ id: UUID) {

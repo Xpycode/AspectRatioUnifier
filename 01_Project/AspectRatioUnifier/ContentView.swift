@@ -148,25 +148,21 @@ struct SidebarView: View {
 struct RatioFilterChips: View {
     @Environment(AppState.self) private var appState
 
-    /// Keeps the toolbar from overflowing on archives with many ratios. Actives
-    /// always make it into the visible set so the user never loses sight of
-    /// their own filter state; the rest go into an overflow Menu.
-    private let maxVisibleChips = 6
-
-    private var orderedBuckets: [AspectRatioBucket] {
-        // Actives first, then remaining by descending count (RatioAnalyzer
-        // emits count-descending already, so that order is preserved).
-        let actives = appState.buckets.filter { appState.isFilterActive(for: $0) }
-        let inactives = appState.buckets.filter { !appState.isFilterActive(for: $0) }
-        return actives + inactives
-    }
+    /// Top-N buckets by count are pinned to the chip strip on initial analysis. The user
+    /// can promote any overflow bucket via the +menu; that promotion replaces the rightmost
+    /// chip slot, so the strip stays at exactly N. Chip order is stable across filter
+    /// toggles — a chip clicked never moves, which preserves the user's spatial map.
+    static let maxVisible = 10
 
     private var visibleBuckets: [AspectRatioBucket] {
-        Array(orderedBuckets.prefix(maxVisibleChips))
+        appState.chipOrder.compactMap { id in
+            appState.buckets.first(where: { $0.id == id })
+        }
     }
 
     private var overflowBuckets: [AspectRatioBucket] {
-        Array(orderedBuckets.dropFirst(maxVisibleChips))
+        let visibleIDs = Set(appState.chipOrder)
+        return appState.buckets.filter { !visibleIDs.contains($0.id) }
     }
 
     var body: some View {
@@ -179,6 +175,7 @@ struct RatioFilterChips: View {
                 Menu {
                     ForEach(overflowBuckets) { bucket in
                         Button {
+                            appState.promoteToChips(bucket.id, max: Self.maxVisible)
                             appState.toggleFilter(for: bucket)
                         } label: {
                             if appState.isFilterActive(for: bucket) {

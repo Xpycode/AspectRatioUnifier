@@ -48,7 +48,7 @@ struct AspectRatioUnifierApp: App {
                 Button("Export...") {
                     showExportPanel()
                 }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
+                .keyboardShortcut("e", modifiers: .command)
                 .disabled(!appState.canExport)
 
                 Divider()
