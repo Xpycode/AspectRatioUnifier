@@ -7,17 +7,11 @@ struct ImageGridView: View {
         GridItem(.adaptive(minimum: 180), spacing: 16)
     ]
 
-    /// Filter by ratioFilter (empty = all), then sort by aspect ratio ascending.
+    /// Filter by ratioFilter (empty = all), then apply the user's grid sort.
     private var visibleImages: [ImageItem] {
         let allowed = appState.filteredImageIDs
-        return appState.images
-            .filter { allowed.contains($0.id) }
-            .sorted { a, b in
-                let ra = a.originalSize.width / a.originalSize.height
-                let rb = b.originalSize.width / b.originalSize.height
-                if ra == rb { return a.id.uuidString < b.id.uuidString }
-                return ra < rb
-            }
+        let filtered = appState.images.filter { allowed.contains($0.id) }
+        return appState.gridSort.apply(to: filtered)
     }
 
     var body: some View {

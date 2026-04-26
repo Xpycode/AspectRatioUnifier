@@ -67,17 +67,28 @@ struct HistogramView: View {
 
     @ViewBuilder
     private var readout: some View {
-        if let bucket = appState.selectedBucket {
+        if let bucket = appState.selectedBucket, let target = appState.targetSize {
+            @Bindable var state = appState
             VStack(alignment: .leading, spacing: 6) {
                 Divider()
                 HStack(spacing: 10) {
                     Image(systemName: "target")
                         .foregroundStyle(Color.accentColor)
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text("Target committed")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text("\(Int(bucket.medianSize.width)) × \(Int(bucket.medianSize.height))")
+                        Picker("", selection: $state.targetSizeStrategy) {
+                            ForEach(TargetSizeStrategy.allCases) { strategy in
+                                Text(strategy.label)
+                                    .tag(strategy)
+                                    .help(strategy.help)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .controlSize(.small)
+                        .labelsHidden()
+                        Text("\(Int(target.width)) × \(Int(target.height))")
                             .font(.system(.callout, design: .monospaced))
                         Text(bucket.label + (bucket.isNamedPreset ? "" : " (custom)"))
                             .font(.caption2)

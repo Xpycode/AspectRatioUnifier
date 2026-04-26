@@ -37,7 +37,12 @@ struct CropPreviewBadge: View {
         let sourceAspect = sourceSize.width / sourceSize.height
 
         if abs(sourceAspect - targetAspect) > 0.001 {
-            let (rect, _) = cropRect(in: size, sourceAspect: sourceAspect)
+            // The image renders with .aspectRatio(.fit) inside `size`, so it occupies a
+            // letterboxed sub-rectangle. Compute that first, then place the crop overlay
+            // inside it — otherwise the dashed rectangle bleeds past the visible image edges
+            // when source and container aspects diverge (e.g. 2:3 portrait in a wide cell).
+            let imageRect = fitRect(sourceAspect: sourceAspect, in: size)
+            let (rect, _) = cropRect(in: imageRect.size, sourceAspect: sourceAspect)
 
             Rectangle()
                 .strokeBorder(
@@ -46,7 +51,22 @@ struct CropPreviewBadge: View {
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                 .frame(width: rect.width, height: rect.height)
-                .offset(x: rect.minX, y: rect.minY)
+                .offset(x: imageRect.minX + rect.minX, y: imageRect.minY + rect.minY)
+        }
+    }
+
+    /// Mirrors SwiftUI's `.aspectRatio(_, contentMode: .fit)`: returns the centered
+    /// sub-rectangle of `container` that the image occupies after letterboxing.
+    private func fitRect(sourceAspect: Double, in container: CGSize) -> CGRect {
+        let containerAspect = container.width / container.height
+        if sourceAspect > containerAspect {
+            // Source wider than container — fit width, letterbox top/bottom.
+            let h = container.width / sourceAspect
+            return CGRect(x: 0, y: (container.height - h) / 2, width: container.width, height: h)
+        } else {
+            // Source taller than container — fit height, letterbox left/right.
+            let w = container.height * sourceAspect
+            return CGRect(x: (container.width - w) / 2, y: 0, width: w, height: container.height)
         }
     }
 

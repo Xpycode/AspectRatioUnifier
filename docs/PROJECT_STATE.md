@@ -11,9 +11,9 @@
 ## Current Position
 - **Funnel:** build
 - **Phase:** implementation
-- **Focus:** Field-test pass + bug fixes shipped 2026-04-25 — preview-sheet legend & per-thumb upscale tooltip, chip strip cap raised to 10 with MRU rotation, bucketing rewritten to constrained-agglomerative (single-link chain + complete-link diameter cap), named-preset snap widened 0.2% → 2.5%. 530-image archive verified: 27 sim-buckets → 18 actual, 3:2 cluster consolidated 4 → 1 (407 imgs). Next: Wave 7 (unified export dialog + target-size-strategy Min/Median/Max — Min = user's "no-upscale" idea, default).
-- **Status:** ready (Waves 1–6.5 merged to `main`; 2026-04-25 changes uncommitted on working tree)
-- **Last updated:** 2026-04-25
+- **Focus:** Wave 7 shipped 2026-04-26 — target-size-strategy Picker (Min/Median/Max, default Min) in HistogramView readout · grid sort feature (Aspect Ratio / Width / Height / Megapixels, persisted to UserDefaults, Picker-in-Menu in toolbar) · CropPreviewBadge overlay now respects `.fit`-rendered image bounds (latent bug surfaced under wide targets). Min hunt workflow validated on the 530-image archive — exclusion of small outliers grows the Min target as designed. Next: Wave 7.5 (surface the binding image with [Reveal] [Exclude] buttons in the sidebar — fully planned, ~90 LOC, see 2026-04-26 session log).
+- **Status:** ready (Waves 1–7 merged to `main`)
+- **Last updated:** 2026-04-26
 
 ## Funnel Progress (Ralph-style)
 
@@ -25,15 +25,15 @@
 
 ## Phase Progress
 ```
-[##################..] 92% - 6.5 of 7 waves complete (analysis + histogram + preview/export + pruning + filter/labels)
+[####################] 100% main waves · Wave 7.5 (binding-image surfacing) is opt-in polish
 ```
 
 | Phase | Status | Tasks |
 |-------|--------|-------|
 | Discovery | ✓ | Problem framed, name chosen, algorithm (B + A fast path) chosen |
 | Planning | ✓ | Reuse map, new-module sketches, wave execution plan, decisions |
-| Implementation | active | Waves 1–6.5 ✓ · Wave 7 (unified export dialog) next |
-| Polish | active | Toolbar + sidebar pruning shipped; Preferences pane + shell-check audit still open |
+| Implementation | ✓ | Waves 1–7 shipped · Wave 7.5 (binding-image surfacing) planned, not yet built |
+| Polish | active | Toolbar/sidebar pruning, Min strategy, sort UX shipped; Preferences pane + shell-check audit still open |
 
 ## Readiness
 
@@ -64,6 +64,9 @@
 - 2026-04-25: Chip strip — top-10 by count on analysis, MRU rotation via +menu replaces rightmost slot, position stable across filter toggles
 - 2026-04-25: Named-preset snap widened 0.2% → 2.5%, sized to ~half the bucketMaxSpan so consolidation-drifted means still snap to "3:2"/"4:3"/etc. labels
 - 2026-04-25: Wave 7 default target-size strategy will be "Min" (largest non-upscaling size) — matches the photographer-cleaning-archives mindset
+- 2026-04-26: Wave 7 — three target-size strategies (Min/Median/Max) shipped. Min/Max are global properties of the included image set; Median is bucket-local. Inscribed-rectangle math drives Min/Max.
+- 2026-04-26: Grid sort — four dimensions (Aspect Ratio / Width / Height / Megapixels) + reverse toggle, persisted to UserDefaults. `targetSizeStrategy` deliberately NOT persisted (opinionated default).
+- 2026-04-26: CropPreviewBadge overlay must respect `.fit`-rendered image bounds, not full badge frame (latent bug, only obvious at extreme aspect mismatches).
 
 All entries in `decisions.md`.
 
@@ -82,7 +85,7 @@ None currently — the three originally blocking were all decided 2026-04-23.
 
 ## Resume
 
-Waves 6 + 6.5 shipped on `main` (commits `905eb3a`, `462a510`). Pruned `ResizeMode`/`ResizeSettings`/`calculateResizedSize`/`resize`/mismatch-panel/`ThumbnailStripView`/`ExportSettingsView`; default suffix `_ratioed`; opaque graphite toolbar; smart trash; `RatioFilterChips` replace `ZoomPicker` with multi-select AND filter; grid sorts ascending by ratio + shows per-thumb capsule chip. Next: Wave 7 — unified export dialog (folder picker, format/quality/suffix/naming, upscale+downscale toggles moved into the preview sheet) + target-size-strategy picker (min / median / max) driving `RatioTargetResolver`. See conversation of 2026-04-23 for accumulated design context.
+Wave 7 + 6.5 + earlier all on `main`. The two pieces of Wave 7 shipped on 2026-04-26: target-size-strategy Picker in the sidebar (Min/Median/Max, default Min) and the grid sort feature (four dimensions, persisted to UserDefaults, Picker-in-Menu in the toolbar). Crop overlay bug also fixed. Wave 7's *other* originally-planned half — unified export dialog consolidation (folder picker + format/quality/suffix/naming + upscale toggles all into the preview sheet) — is still open but lower-priority. Wave 7.5 (surface the binding image with [Reveal] [Exclude] buttons in HistogramView readout, ScrollViewReader integration in ImageGridView) is fully planned in the 2026-04-26 session log; ~90 LOC, ready to ship next session.
 
 ---
 *Updated by Claude. Source of truth for project position.*

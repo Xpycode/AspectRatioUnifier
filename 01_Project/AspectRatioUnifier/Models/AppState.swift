@@ -33,6 +33,16 @@ final class AppState {
     /// buckets by count on every re-analysis; user can promote an overflow bucket via
     /// the +menu, which evicts the rightmost slot. Bounded to RatioFilterChips.maxVisible.
     var chipOrder: [UUID] = []
+    /// How target dimensions are derived from the picked bucket's ratio. Default `.min`
+    /// (no upscaling) suits the photographer-cleaning-archives mindset that drives this
+    /// app — see decisions.md 2026-04-25.
+    var targetSizeStrategy: TargetSizeStrategy = .min
+
+    /// Grid sort dimension + direction. Persisted to UserDefaults so the user's choice
+    /// survives relaunch (sort is muscle memory; not opinionated like targetSizeStrategy).
+    var gridSort: GridSort = GridSort.load() {
+        didSet { gridSort.persist() }
+    }
 
     var selectedBucket: AspectRatioBucket? {
         guard let id = selectedBucketID else { return nil }
@@ -41,7 +51,14 @@ final class AppState {
 
     var targetSize: CGSize? {
         guard let bucket = selectedBucket else { return nil }
-        return RatioTargetResolver().resolve(bucket: bucket)
+        let sources = images
+            .filter { !excludedImageIDs.contains($0.id) }
+            .map(\.originalSize)
+        return RatioTargetResolver().resolve(
+            bucket: bucket,
+            sources: sources,
+            strategy: targetSizeStrategy
+        )
     }
 
     // MARK: - Exclusion helpers
@@ -386,5 +403,17 @@ struct ImageItem: Identifiable {
 
     var isLossyFormat: Bool {
         ["jpg", "jpeg", "heic"].contains(fileExtension)
+    }
+
+    /// width / height in pixels. Guards a zero divisor since `originalSize` falls back
+    /// to `NSImage.size` if CGImage extraction fails — that path can return zero.
+    var aspectRatio: Double {
+        let h = originalSize.height
+        return h > 0 ? originalSize.width / h : 0
+    }
+
+    /// Total pixel count expressed in megapixels (one decimal place is enough for sort comparisons).
+    var megapixels: Double {
+        (originalSize.width * originalSize.height) / 1_000_000
     }
 }

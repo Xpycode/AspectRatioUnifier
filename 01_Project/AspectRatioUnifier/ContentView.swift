@@ -34,6 +34,8 @@ struct ContentView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 if !appState.images.isEmpty {
                     HStack {
+                        gridSortMenu
+
                         Button { showShortcutsPopover.toggle() } label: {
                             Image(systemName: "questionmark.circle")
                                 .resizable()
@@ -91,6 +93,32 @@ struct ContentView: View {
         .toolbarRole(.editor)
         .toolbarBackground(Color(white: 0.10), for: .windowToolbar)
         .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+    }
+
+    /// Sort menu for the grid. Picker auto-renders a checkmark on the current dimension
+    /// when nested in a Menu — the canonical Finder/Lightroom pattern. Toggle controls the
+    /// direction independently so we don't double the menu length with "X ↑" / "X ↓" pairs.
+    @ViewBuilder
+    private var gridSortMenu: some View {
+        @Bindable var state = appState
+        Menu {
+            Picker("Sort by", selection: $state.gridSort.dimension) {
+                ForEach(GridSortDimension.allCases) { dim in
+                    Text(dim.label).tag(dim)
+                }
+            }
+            Divider()
+            Toggle("Reverse Order", isOn: $state.gridSort.reversed)
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 16, height: 16)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Sort grid by \(appState.gridSort.dimension.label.lowercased())\(appState.gridSort.reversed ? " (reversed)" : "")")
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
